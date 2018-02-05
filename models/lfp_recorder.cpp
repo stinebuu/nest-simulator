@@ -243,9 +243,9 @@ lfp_recorder::calibrate()
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
-    V_.P11_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] ); //NB! kan være feil
-    V_.P22_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
-    V_.P21_syn_[ i ] = ( ( P_.tau_rise[ i ] * P_.tau_decay[ i ] ) / ( P_.tau_rise[ i ] - P_.tau_decay[ i ] ) ) *( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
+    V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] ); //NB! kan være feil
+    V_.P22_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
+    V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] ) / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) ) * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
 
     // the denominator (denom1) that appears in the expression of the peak time
