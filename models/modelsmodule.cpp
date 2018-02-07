@@ -102,6 +102,7 @@
 #include "correlation_detector.h"
 #include "correlomatrix_detector.h"
 #include "correlospinmatrix_detector.h"
+#include "lfp_recorder.h"
 #include "multimeter.h"
 #include "spike_detector.h"
 #include "spin_detector.h"
@@ -253,6 +254,7 @@ ModelsModule::init( SLIInterpreter* )
   kernel().model_manager.register_node_model< spin_detector >(
     "spin_detector" );
   kernel().model_manager.register_node_model< Multimeter >( "multimeter" );
+  kernel().model_manager.register_node_model< lfp_recorder >( "lfp_recorder" );
   kernel().model_manager.register_node_model< correlation_detector >(
     "correlation_detector" );
   kernel().model_manager.register_node_model< correlomatrix_detector >(
