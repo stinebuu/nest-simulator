@@ -159,7 +159,7 @@ private:
     //! Logger for all analog data
     UniversalDataLogger< lfp_recorder > logger_;
 
-    /** buffers and sums up incoming spikes/currents */
+    /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
 
   };
@@ -171,8 +171,7 @@ private:
    */
   struct Variables_
   {
-    // From iaf_psc_alpha_multisynapse
-    std::vector< double > PSCInitialValues_;
+    std::vector< double > normalizer_;
 
     std::vector< double > P11_syn_;
     std::vector< double > P21_syn_;
@@ -239,7 +238,6 @@ lfp_recorder::get_status( DictionaryDatum& d ) const
 {
   P_.get( d );
   S_.get( d );
-  Archiving_Node::get_status( d );
 
   ( *d )[ names::recordables ] = recordablesMap_.get_list();
 }
@@ -251,12 +249,6 @@ lfp_recorder::set_status( const DictionaryDatum& d )
   ptmp.set( d );         // throws if BadProperty
   State_ stmp = S_;      // temporary copy in case of errors
   stmp.set( d );         // throws if BadProperty
-
-  // We now know that (ptmp, stmp) are consistent. We do not
-  // write them back to (P_, S_) before we are also sure that
-  // the properties to be set in the parent class are internally
-  // consistent.
-  Archiving_Node::set_status( d );
 
   // if we get here, temporaries contain consistent set of properties
   P_ = ptmp;

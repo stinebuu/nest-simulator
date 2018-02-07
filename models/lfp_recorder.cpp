@@ -56,9 +56,7 @@ void
 RecordablesMap< lfp_recorder >::create()
 {
   // use standard names wherever you can for consistency!
-  //insert_( names::V_m,
-  //  &lfp_recorder::
-  //    get_y_elem_< lfp_recorder::State_::V_M > );
+  insert_( Name("lfp"), &lfp_recorder:: get_y_elem_< lfp_recorder::State_::G > );
 }
 
 /* ----------------------------------------------------------------
@@ -236,17 +234,16 @@ lfp_recorder::calibrate()
 
   S_.y_.resize( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
 
-
-  V_.PSCInitialValues_.resize( P_.n_receptors() );
-
   B_.spikes_.resize( P_.n_receptors() );
+
+  // normalizer_ will be initialized in the loop below.
+  V_.normalizer_.resize( P_.n_receptors() );
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
-    V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] ); //NB! kan være feil
+    V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
     V_.P22_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
     V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] ) / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) ) * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
-
 
     // the denominator (denom1) that appears in the expression of the peak time
     // is computed here to check that it is != 0
@@ -264,18 +261,19 @@ lfp_recorder::calibrate()
       // peak time
       const double t_p = P_.tau_decay[ i ] * P_.tau_rise[ i ]
         * std::log( P_.tau_decay[ i ] / P_.tau_rise[ i ] ) / denom1;
+
       // another denominator is computed here to check that it is != 0
       denom2 = std::exp( -t_p / P_.tau_decay[ i ] )
         - std::exp( -t_p / P_.tau_rise[ i ] );
     }
     if ( denom2 == 0 ) // if rise time == decay time use alpha function
     {                  // use normalization for alpha function in this case
-      V_.PSCInitialValues_[ i ] = 1.0 * numerics::e / P_.tau_decay[ i ];
+      V_.normalizer_[ i ] = 1.0 * numerics::e / P_.tau_decay[ i ];
     }
     else // if rise time != decay time use beta function
     {
-      V_.PSCInitialValues_[ i ] // normalization factor for conductance
-        = ( 1. / P_.tau_rise[ i ] - 1. / P_.tau_decay[ i ] ) / denom2;
+      // normalization factor for conductance
+      V_.normalizer_[ i ] = ( ( 1. / P_.tau_rise[ i ] ) - ( 1. / P_.tau_decay[ i ] ) ) / denom2;
     }
 
     B_.spikes_[ i ].resize();
@@ -307,7 +305,10 @@ lfp_recorder::update( Time const& origin,
 
       S_.y_[ State_::DG
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-                  V_.PSCInitialValues_[ i ] * B_.spikes_[ i ].get_value( lag );
+                  V_.normalizer_[ i ] * B_.spikes_[ i ].get_value( lag );
+
+      std::cerr << "origin time: " << origin << std::endl;
+      std::cerr << "G: " << S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] << std::endl;
     }
 
     // log state data
