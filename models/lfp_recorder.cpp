@@ -22,10 +22,6 @@
 
 #include "lfp_recorder.h"
 
-
-// C++ includes:
-#include <limits>
-
 // Includes from libnestutil:
 #include "numerics.h"
 
@@ -34,11 +30,6 @@
 #include "kernel_manager.h"
 #include "universal_data_logger_impl.h"
 
-// Includes from sli:
-#include "dict.h"
-#include "dictutils.h"
-#include "doubledatum.h"
-#include "integerdatum.h"
 
 /* ----------------------------------------------------------------
  * Recordables map
@@ -130,7 +121,7 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
       if ( tau_decay[ i ] < tau_rise[ i ] )
       {
         throw BadProperty(
-          "Synaptic rise time must be smaller than or equal to decay time." );
+          "Synaptic rise time must be smaller than or equal to decay time." ); // TODO: Denne slår ut noen ganger, ikke relevant for oss?
       }
     }
   }
@@ -214,7 +205,7 @@ lfp_recorder::init_state_( const Node& proto )
 void
 lfp_recorder::init_buffers_()
 {
-  B_.spikes_.clear();   // includes resize
+  B_.spikes_.clear(); // includes resize
   Archiving_Node::clear_history();
 
   B_.logger_.reset();
@@ -223,7 +214,7 @@ lfp_recorder::init_buffers_()
 void
 lfp_recorder::calibrate()
 {
-  // ensures initialization in case mm connected after Simulate
+  // Ensures initialization in case mm connected after Simulate
   B_.logger_.init();
 
   const double h = Time::get_resolution().get_ms();
@@ -241,14 +232,15 @@ lfp_recorder::calibrate()
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
+    // Set matrix components
     V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
     V_.P22_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
     V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] ) / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) ) * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
-    // the denominator (denom1) that appears in the expression of the peak time
-    // is computed here to check that it is != 0
-    // another denominator denom2 appears in the expression of the
-    // normalization factor g0
+    // The denominator (denom1) that appears in the expression of the peak time
+    // is computed here to check that it is != 0.
+    // Another denominator denom2 appears in the expression of the
+    // normalization factor normalizer_.
     // Both denom1 and denom2 are null if tau_decay = tau_rise, but they
     // can also be null if tau_decay and tau_rise are not equal but very
     // close to each other, due to the numerical precision limits.
@@ -262,7 +254,7 @@ lfp_recorder::calibrate()
       const double t_p = P_.tau_decay[ i ] * P_.tau_rise[ i ]
         * std::log( P_.tau_decay[ i ] / P_.tau_rise[ i ] ) / denom1;
 
-      // another denominator is computed here to check that it is != 0
+      // Another denominator is computed here to check that it is != 0
       denom2 = std::exp( -t_p / P_.tau_decay[ i ] )
         - std::exp( -t_p / P_.tau_rise[ i ] );
     }
@@ -272,7 +264,7 @@ lfp_recorder::calibrate()
     }
     else // if rise time != decay time use beta function
     {
-      // normalization factor for conductance
+      // normalization factor for beta function
       V_.normalizer_[ i ] = ( ( 1. / P_.tau_rise[ i ] ) - ( 1. / P_.tau_decay[ i ] ) ) / denom2;
     }
 
@@ -306,9 +298,6 @@ lfp_recorder::update( Time const& origin,
       S_.y_[ State_::DG
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
                   V_.normalizer_[ i ] * B_.spikes_[ i ].get_value( lag );
-
-      std::cerr << "origin time: " << origin << std::endl;
-      std::cerr << "G: " << S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] << std::endl;
     }
 
     // log state data

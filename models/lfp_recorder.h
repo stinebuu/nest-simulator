@@ -23,9 +23,6 @@
 #ifndef LFP_RECORDER_H
 #define LFP_RECORDER_H
 
-// Generated includes:
-#include "config.h"
-
 // Includes from nestkernel:
 #include "archiving_node.h"
 #include "connection.h"
@@ -183,7 +180,7 @@ private:
 
   // Access functions for UniversalDataLogger -------------------------------
 
-  //! Read out state vector elements, used by UniversalDataLogger
+  //! Read out state vector elements, used by UniversalDataLogger and RecordablesMap
   template < State_::StateVecElems elem >
   double
   get_y_elem_() const
