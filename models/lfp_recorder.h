@@ -158,7 +158,6 @@ private:
 
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
-
   };
 
   // ----------------------------------------------------------------
@@ -175,12 +174,12 @@ private:
     std::vector< double > P22_syn_;
 
     unsigned int receptor_types_size_;
-
   };
 
   // Access functions for UniversalDataLogger -------------------------------
 
-  //! Read out state vector elements, used by UniversalDataLogger and RecordablesMap
+  //! Read out state vector elements, used by UniversalDataLogger and
+  //RecordablesMap
   template < State_::StateVecElems elem >
   double
   get_y_elem_() const
@@ -220,8 +219,7 @@ lfp_recorder::send_test_event( Node& target,
 }
 
 inline port
-lfp_recorder::handles_test_event( DataLoggingRequest& dlr,
-  rport receptor_type )
+lfp_recorder::handles_test_event( DataLoggingRequest& dlr, rport receptor_type )
 {
   if ( receptor_type != 0 )
   {

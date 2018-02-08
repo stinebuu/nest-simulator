@@ -35,8 +35,7 @@
  * Recordables map
  * ---------------------------------------------------------------- */
 
-nest::RecordablesMap< nest::lfp_recorder >
-  nest::lfp_recorder::recordablesMap_;
+nest::RecordablesMap< nest::lfp_recorder > nest::lfp_recorder::recordablesMap_;
 
 namespace nest // template specialization must be placed in namespace
 {
@@ -47,7 +46,8 @@ void
 RecordablesMap< lfp_recorder >::create()
 {
   // use standard names wherever you can for consistency!
-  insert_( Name("lfp"), &lfp_recorder:: get_y_elem_< lfp_recorder::State_::G > );
+  insert_(
+    Name( "lfp" ), &lfp_recorder::get_y_elem_< lfp_recorder::State_::G > );
 }
 
 /* ----------------------------------------------------------------
@@ -70,8 +70,7 @@ lfp_recorder::State_::State_( const State_& s )
   y_ = s.y_;
 }
 
-lfp_recorder::State_& lfp_recorder::State_::
-operator=( const State_& s )
+lfp_recorder::State_& lfp_recorder::State_::operator=( const State_& s )
 {
   assert( this != &s ); // would be bad logical error in program
 
@@ -152,14 +151,12 @@ lfp_recorder::State_::set( const DictionaryDatum& d )
 {
 }
 
-lfp_recorder::Buffers_::Buffers_(
-  lfp_recorder& n )
+lfp_recorder::Buffers_::Buffers_( lfp_recorder& n )
   : logger_( n )
 {
 }
 
-lfp_recorder::Buffers_::Buffers_( const Buffers_& b,
-  lfp_recorder& n )
+lfp_recorder::Buffers_::Buffers_( const Buffers_& b, lfp_recorder& n )
   : logger_( n )
 {
 }
@@ -177,8 +174,7 @@ lfp_recorder::lfp_recorder()
   recordablesMap_.create();
 }
 
-lfp_recorder::lfp_recorder(
-  const lfp_recorder& n )
+lfp_recorder::lfp_recorder( const lfp_recorder& n )
   : Archiving_Node( n )
   , P_( n.P_ )
   , S_( n.S_ )
@@ -197,8 +193,7 @@ lfp_recorder::~lfp_recorder()
 void
 lfp_recorder::init_state_( const Node& proto )
 {
-  const lfp_recorder& pr =
-    downcast< lfp_recorder >( proto );
+  const lfp_recorder& pr = downcast< lfp_recorder >( proto );
   S_ = pr.S_;
 }
 
@@ -223,7 +218,8 @@ lfp_recorder::calibrate()
   V_.P21_syn_.resize( P_.n_receptors() );
   V_.P22_syn_.resize( P_.n_receptors() );
 
-  S_.y_.resize( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
+  S_.y_.resize(
+    State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
 
   B_.spikes_.resize( P_.n_receptors() );
 
@@ -235,7 +231,9 @@ lfp_recorder::calibrate()
     // Set matrix components
     V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
     V_.P22_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
-    V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] ) / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) ) * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
+    V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] )
+                         / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
+      * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
     // The denominator (denom1) that appears in the expression of the peak time
     // is computed here to check that it is != 0.
@@ -265,7 +263,8 @@ lfp_recorder::calibrate()
     else // if rise time != decay time use beta function
     {
       // normalization factor for beta function
-      V_.normalizer_[ i ] = ( ( 1. / P_.tau_rise[ i ] ) - ( 1. / P_.tau_decay[ i ] ) ) / denom2;
+      V_.normalizer_[ i ] =
+        ( ( 1. / P_.tau_rise[ i ] ) - ( 1. / P_.tau_decay[ i ] ) ) / denom2;
     }
 
     B_.spikes_[ i ].resize();
@@ -276,9 +275,7 @@ lfp_recorder::calibrate()
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 void
-lfp_recorder::update( Time const& origin,
-  const long from,
-  const long to )
+lfp_recorder::update( Time const& origin, const long from, const long to )
 {
   assert(
     to >= 0 && ( delay ) from < kernel().connection_manager.get_min_delay() );
@@ -288,16 +285,20 @@ lfp_recorder::update( Time const& origin,
   {
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
-      S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] =
-          V_.P21_syn_[ i ] * S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +
-          V_.P22_syn_[ i ] * S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                           * i ) ] = V_.P21_syn_[ i ]
+          * S_.y_[ State_::DG
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn_[ i ]
+          * S_.y_[ State_::G
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+
+      S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                            * i ) ] *= V_.P11_syn_[ i ];
 
       S_.y_[ State_::DG
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] *= V_.P11_syn_[ i ];
-
-      S_.y_[ State_::DG
-              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-                  V_.normalizer_[ i ] * B_.spikes_[ i ].get_value( lag );
+        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
+        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value( lag );
     }
 
     // log state data
@@ -307,8 +308,7 @@ lfp_recorder::update( Time const& origin,
 }
 
 port
-lfp_recorder::handles_test_event( SpikeEvent&,
-  rport receptor_type )
+lfp_recorder::handles_test_event( SpikeEvent&, rport receptor_type )
 {
   if ( receptor_type <= 0
     || receptor_type > static_cast< port >( P_.n_receptors() ) )
@@ -343,4 +343,3 @@ lfp_recorder::handle( DataLoggingRequest& e )
 }
 
 } // namespace nest
-
