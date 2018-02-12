@@ -76,6 +76,8 @@ private:
   void calibrate();
   void update( Time const&, const long, const long );
 
+  long get_pop_of_gid( const index& ) const;
+
   // The next two classes need to be friends to access the State_ class/member
   friend class RecordablesMap< lfp_recorder >;
   friend class UniversalDataLogger< lfp_recorder >;
@@ -91,6 +93,7 @@ private:
                                      //!< in ms.
     std::vector< double > tau_decay; //!< Decay time of synaptic conductance
                                      //!< in ms.
+    std::vector< long > borders;
 
     Parameters_(); //!< Sets default parameter values
 
@@ -158,6 +161,7 @@ private:
 
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
+    std::map< long, std::vector< long > > connectome_map;
   };
 
   // ----------------------------------------------------------------
@@ -174,17 +178,25 @@ private:
     std::vector< double > P22_syn_;
 
     unsigned int receptor_types_size_;
+
+    int num_populations_;
   };
 
   // Access functions for UniversalDataLogger -------------------------------
 
   //! Read out state vector elements, used by UniversalDataLogger and
-  //RecordablesMap
+  // RecordablesMap
   template < State_::StateVecElems elem >
   double
   get_y_elem_() const
   {
-    return S_.y_[ elem ];
+    double tot_lfp = 0;
+    for ( size_t i = 0; i < P_.n_receptors(); ++i )
+    {
+      tot_lfp +=
+        S_.y_[ elem + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+    }
+    return tot_lfp;
   }
 
   // Data members -----------------------------------------------------------
