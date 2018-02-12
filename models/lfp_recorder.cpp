@@ -88,8 +88,10 @@ lfp_recorder::Parameters_::get( DictionaryDatum& d ) const
   def< size_t >( d, names::n_receptors, n_receptors() );
   ArrayDatum tau_rise_ad( tau_rise );
   ArrayDatum tau_decay_ad( tau_decay );
+  ArrayDatum borders_ad( borders );
   def< ArrayDatum >( d, names::tau_rise, tau_rise_ad );
   def< ArrayDatum >( d, names::tau_decay, tau_decay_ad );
+  def< ArrayDatum >( d, Name( "borders" ), borders_ad );
 }
 
 void
@@ -100,6 +102,17 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
     updateValue< std::vector< double > >( d, names::tau_rise, tau_rise );
   bool taud_flag =
     updateValue< std::vector< double > >( d, names::tau_decay, tau_decay );
+  if ( tau_rise.size() != tau_decay.size() )
+  {
+    throw BadProperty( "Tau coefficient arrays must have the same length." );
+  }
+  double num_populations = std::sqrt( tau_rise.size() );
+  if ( num_populations != std::floor( num_populations ) )
+  {
+    throw BadProperty(
+      "Must provide coefficients for all combinations of population "
+      "connections." );
+  }
   if ( taur_flag || taud_flag )
   { // receptor arrays have been modified
     if ( ( tau_rise.size() != old_n_receptors
@@ -122,6 +135,16 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
         throw BadProperty(
           "Synaptic rise time must be smaller than or equal to decay time." ); // TODO: Denne slår ut noen ganger, ikke relevant for oss?
       }
+    }
+  }
+  if ( updateValue< std::vector< long > >( d, Name( "borders" ), borders )
+    && borders.size() != 0 )
+  {
+    if ( borders.size() / 2.0 != num_populations )
+    {
+      throw BadProperty(
+        "Number of borders does not correspond with number of tau "
+        "coefficients. Must be two borders per population." );
     }
   }
 }
@@ -214,6 +237,8 @@ lfp_recorder::calibrate()
 
   const double h = Time::get_resolution().get_ms();
 
+  V_.num_populations_ = std::sqrt( P_.n_receptors() );
+
   V_.P11_syn_.resize( P_.n_receptors() );
   V_.P21_syn_.resize( P_.n_receptors() );
   V_.P22_syn_.resize( P_.n_receptors() );
@@ -268,6 +293,73 @@ lfp_recorder::calibrate()
     }
 
     B_.spikes_[ i ].resize();
+  }
+
+  // Get GIDs of nodes connected to the LFP recorder.
+  // TODO: Getting connections this way may introduce some excessive overhead to
+  // simulations. Should reconsider implementation if it slows down simulation
+  // initialisation too much.
+  std::deque< ConnectionID > connectome;
+  std::vector< size_t > self_target;
+  const TokenArray* self_source_a = 0;
+  long synapse_label = UNLABELED_CONNECTION;
+  self_target.push_back( this->get_gid() );
+  const TokenArray self_target_a = TokenArray( self_target );
+  //  const TokenArray* target_a = 0;
+  //  target_a = dynamic_cast< TokenArray const* >( TokenArray( self_target ) );
+  //  *target_a = TokenArray( self_target );
+  for ( size_t syn_id = 0;
+        syn_id < kernel().model_manager.get_num_synapse_prototypes();
+        ++syn_id )
+  {
+    kernel().connection_manager.get_connections(
+      connectome, self_source_a, &self_target_a, syn_id, synapse_label );
+  }
+
+  // Get all targets of these neurons.
+  std::vector< size_t > n_sources;
+  const TokenArray* target_a = 0;
+  for ( std::deque< ConnectionID >::const_iterator it = connectome.begin();
+        it != connectome.end();
+        ++it )
+  {
+    n_sources.push_back( it->get_source_gid() );
+  }
+  const TokenArray source_a = TokenArray( n_sources );
+  connectome.clear();
+  for ( size_t syn_id = 0;
+        syn_id < kernel().model_manager.get_num_synapse_prototypes();
+        ++syn_id )
+  {
+    kernel().connection_manager.get_connections(
+      connectome, &source_a, target_a, syn_id, synapse_label );
+  }
+
+  // Convert connectome deque to map for efficient lookup.
+  for ( std::deque< ConnectionID >::const_iterator con = connectome.begin();
+        con != connectome.end();
+        ++con )
+  {
+    Node* target_node = kernel().node_manager.get_node(
+      con->get_target_gid(), con->get_target_thread() );
+    // Skip if target is a device or this model.
+    if ( not target_node->has_proxies()
+      or target_node->get_model_id() == this->get_model_id() )
+    {
+      continue;
+    }
+    if ( B_.connectome_map.count( con->get_source_gid() ) == 0 )
+    {
+      // If key doesn't exist in the map.
+      std::vector< long > target_vector;
+      target_vector.push_back( con->get_target_gid() );
+      B_.connectome_map[ con->get_source_gid() ] = target_vector;
+    }
+    else
+    {
+      B_.connectome_map[ con->get_source_gid() ].push_back(
+        con->get_target_gid() );
+    }
   }
 }
 
@@ -328,18 +420,84 @@ lfp_recorder::handle( SpikeEvent& e )
       "must be positive." );
   }
   assert( e.get_delay() > 0 );
-  assert(
-    ( e.get_rport() > 0 ) && ( ( size_t ) e.get_rport() <= P_.n_receptors() ) );
 
-  B_.spikes_[ e.get_rport() - 1 ].add_value(
-    e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() ),
-    e.get_weight() * e.get_multiplicity() );
+  long source_pop = 0;
+  long target_pop = 0;
+
+  // TODO: Should probably only allow with borders eventually.
+  if ( P_.borders.size() > 0 )
+  {
+    index gid = e.get_sender_gid();
+    source_pop = get_pop_of_gid( gid );
+    if ( source_pop == -1 )
+    {
+      std::stringstream string_stream;
+      string_stream << gid;
+      throw KernelException( "Detected spike from undefined population, gid = "
+        + string_stream.str() );
+    }
+    std::vector< long >* targets = &B_.connectome_map[ gid ];
+    for ( std::vector< long >::const_iterator vec_it = targets->begin();
+          vec_it != targets->end();
+          ++vec_it )
+    {
+      target_pop = get_pop_of_gid( *vec_it );
+      if ( target_pop == -1 )
+      {
+        std::stringstream string_stream;
+        string_stream << *vec_it;
+        throw KernelException( "Detected spike to undefined population, gid = "
+          + string_stream.str() );
+      }
+      else
+      {
+        // Map source and target population to an index in the spike vector.
+        long spike_index = source_pop * V_.num_populations_ + target_pop;
+
+        assert( ( spike_index >= 0 )
+          && ( ( size_t ) spike_index <= P_.n_receptors() ) );
+
+        B_.spikes_[ spike_index ].add_value(
+          e.get_rel_delivery_steps(
+            kernel().simulation_manager.get_slice_origin() ),
+          e.get_weight() * e.get_multiplicity() );
+      }
+    }
+  }
+  else
+  {
+    B_.spikes_[ 0 ].add_value(
+      e.get_rel_delivery_steps(
+        kernel().simulation_manager.get_slice_origin() ),
+      e.get_weight() * e.get_multiplicity() );
+  }
 }
 
 void
 lfp_recorder::handle( DataLoggingRequest& e )
 {
   B_.logger_.handle( e );
+}
+
+long
+lfp_recorder::get_pop_of_gid( const index& gid ) const
+{
+  long pop = -1;
+  // Iterate over borders to find the population of the GID.
+  for ( u_long i = 0; i <= P_.borders.size(); i += 2 )
+  {
+    if ( ( u_long ) P_.borders[ i ] <= gid
+      && gid <= ( u_long ) P_.borders[ i + 1 ] )
+    {
+      const double tmp_pop = i / 2;
+      // TODO: remove assertion when model works.
+      assert(
+        tmp_pop == std::floor( tmp_pop ) ); // Population must be an integer.
+      pop = tmp_pop;
+      break; // A neuron can be in only one population.
+    }
+  }
+  return pop;
 }
 
 } // namespace nest
