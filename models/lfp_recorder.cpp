@@ -54,9 +54,12 @@ RecordablesMap< lfp_recorder >::create()
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
+// TODO: Do something about these parameter initializations, they are not
+// sensible
 lfp_recorder::Parameters_::Parameters_()
   : tau_rise( 1, 2.0 )   // ms
   , tau_decay( 1, 20.0 ) // ms
+  , normalizer( 1, 1 )
 {
 }
 
@@ -88,9 +91,11 @@ lfp_recorder::Parameters_::get( DictionaryDatum& d ) const
   def< size_t >( d, names::n_receptors, n_receptors() );
   ArrayDatum tau_rise_ad( tau_rise );
   ArrayDatum tau_decay_ad( tau_decay );
+  ArrayDatum normalizer_ad( normalizer );
   ArrayDatum borders_ad( borders );
   def< ArrayDatum >( d, names::tau_rise, tau_rise_ad );
   def< ArrayDatum >( d, names::tau_decay, tau_decay_ad );
+  def< ArrayDatum >( d, Name( "normalizer" ), normalizer_ad );
   def< ArrayDatum >( d, Name( "borders" ), borders_ad );
 }
 
@@ -98,6 +103,7 @@ void
 lfp_recorder::Parameters_::set( const DictionaryDatum& d )
 {
   const size_t old_n_receptors = n_receptors();
+
   bool taur_flag =
     updateValue< std::vector< double > >( d, names::tau_rise, tau_rise );
   bool taud_flag =
@@ -105,13 +111,6 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
   if ( tau_rise.size() != tau_decay.size() )
   {
     throw BadProperty( "Tau coefficient arrays must have the same length." );
-  }
-  double num_populations = std::sqrt( tau_rise.size() );
-  if ( num_populations != std::floor( num_populations ) )
-  {
-    throw BadProperty(
-      "Must provide coefficients for all combinations of population "
-      "connections." );
   }
   if ( taur_flag || taud_flag )
   { // receptor arrays have been modified
@@ -137,6 +136,22 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
       }
     }
   }
+
+  updateValue< std::vector< double > >( d, Name( "normalizer" ), normalizer );
+  if ( normalizer.size() != tau_rise.size() )
+  {
+    throw BadProperty(
+      "normalizer array must have same length as the tau arrays." );
+  }
+
+  double num_populations = std::sqrt( tau_rise.size() );
+  if ( num_populations != std::floor( num_populations ) )
+  {
+    throw BadProperty(
+      "Must provide coefficients for all combinations of population "
+      "connections." );
+  }
+
   if ( updateValue< std::vector< long > >( d, Name( "borders" ), borders )
     && borders.size() != 0 )
   {
@@ -260,37 +275,7 @@ lfp_recorder::calibrate()
                          / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
-    // The denominator (denom1) that appears in the expression of the peak time
-    // is computed here to check that it is != 0.
-    // Another denominator denom2 appears in the expression of the
-    // normalization factor normalizer_.
-    // Both denom1 and denom2 are null if tau_decay = tau_rise, but they
-    // can also be null if tau_decay and tau_rise are not equal but very
-    // close to each other, due to the numerical precision limits.
-    // In such case the beta function reduces to the alpha function,
-    // and the normalization factor for the alpha function should be used.
-    double denom1 = P_.tau_decay[ i ] - P_.tau_rise[ i ];
-    double denom2 = 0;
-    if ( denom1 != 0 )
-    {
-      // peak time
-      const double t_p = P_.tau_decay[ i ] * P_.tau_rise[ i ]
-        * std::log( P_.tau_decay[ i ] / P_.tau_rise[ i ] ) / denom1;
-
-      // Another denominator is computed here to check that it is != 0
-      denom2 = std::exp( -t_p / P_.tau_decay[ i ] )
-        - std::exp( -t_p / P_.tau_rise[ i ] );
-    }
-    if ( denom2 == 0 ) // if rise time == decay time use alpha function
-    {                  // use normalization for alpha function in this case
-      V_.normalizer_[ i ] = 1.0 * numerics::e / P_.tau_decay[ i ];
-    }
-    else // if rise time != decay time use beta function
-    {
-      // normalization factor for beta function
-      V_.normalizer_[ i ] =
-        ( ( 1. / P_.tau_rise[ i ] ) - ( 1. / P_.tau_decay[ i ] ) ) / denom2;
-    }
+    V_.normalizer_[ i ] = P_.normalizer[ i ];
 
     B_.spikes_[ i ].resize();
   }

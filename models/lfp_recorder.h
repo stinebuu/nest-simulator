@@ -93,6 +93,9 @@ private:
                                      //!< in ms.
     std::vector< double > tau_decay; //!< Decay time of synaptic conductance
                                      //!< in ms.
+
+    std::vector< double > normalizer; //!< Normalizing factor.
+
     std::vector< long > borders;
 
     Parameters_(); //!< Sets default parameter values

@@ -39,7 +39,8 @@ class LFPRecorderTestCase(unittest.TestCase):
 
         lfp = nest.Create('lfp_recorder', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
-                           'tau_decay': [1. / 0.48856915462005396]})
+                           'tau_decay': [1. / 0.48856915462005396],
+                           'normalizer': [0.00015807504272622632]})
         s_generator = nest.Create('spike_generator', 1, {'spike_times': [10.]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
 
@@ -62,21 +63,24 @@ class LFPRecorderTestCase(unittest.TestCase):
         # First create several lfp_recorders, spike_generators and multimeters:
         lfp1 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         s_generator1 = nest.Create('spike_generator', 1,
                                    {'spike_times': [10., 15., 20., 25., 30.,
                                                     35., 40., 45., 50., 55.]})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp2 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         s_generator2 = nest.Create('spike_generator', 1,
                                    {'spike_times': [12., 17., 22., 27., 32.,
                                                     37., 42., 47., 52., 57.]})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp3 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         s_generator3 = nest.Create('spike_generator', 1,
                                    {'spike_times': [14., 19., 24., 29., 34.,
                                                     39., 44., 49., 54., 59.]})
@@ -114,7 +118,8 @@ class LFPRecorderTestCase(unittest.TestCase):
 
         lfp = nest.Create('lfp_recorder', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
-                           'tau_decay': [1. / 0.48856915462005396]})
+                           'tau_decay': [1. / 0.48856915462005396],
+                           'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         s_generator1 = nest.Create('spike_generator', 1,
                                    {'spike_times': [10., 15., 20., 25., 30.,
@@ -148,7 +153,8 @@ class LFPRecorderTestCase(unittest.TestCase):
 
         lfp = nest.Create('lfp_recorder', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
-                           'tau_decay': [1. / 0.48856915462005396]})
+                           'tau_decay': [1. / 0.48856915462005396],
+                           'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         s_generator = nest.Create('spike_generator', 1,
                                   {'spike_times': [10., 12., 14., 15., 17.,
@@ -181,17 +187,20 @@ class LFPRecorderTestCase(unittest.TestCase):
         # Create:
         lfp1 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         p_generator1 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp2 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         p_generator2 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp3 = nest.Create('lfp_recorder', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
-                            'tau_decay': [1. / 0.48856915462005396]})
+                            'tau_decay': [1. / 0.48856915462005396],
+                            'normalizer': [0.00015807504272622632]})
         p_generator3 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi3 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
 
@@ -223,7 +232,8 @@ class LFPRecorderTestCase(unittest.TestCase):
 
         lfp = nest.Create('lfp_recorder', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
-                           'tau_decay': [1. / 0.48856915462005396]})
+                           'tau_decay': [1. / 0.48856915462005396],
+                           'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         p_generator1 = nest.Create('poisson_generator', 1, {'rate': 800.})
         p_generator2 = nest.Create('poisson_generator', 1, {'rate': 800.})
