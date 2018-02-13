@@ -24,6 +24,7 @@ Tests for the lfp_detector
 """
 
 import unittest
+import math
 import nest
 import numpy as np
 
@@ -254,6 +255,69 @@ class LFPDetectorTestCase(unittest.TestCase):
         for count in range(len(collected_lfp)):
             self.assertAlmostEqual(collected_lfp[count],
                                    gs[0]['events']['lfp'][count])
+
+    def test_kernel_convolution(self):
+        """Test lfp with realistic data"""
+
+        # To test that the lfp we get from nestkernel is realistic, we test it
+        # against a convolution between the firing rate and a kernel on python
+        # level, where the kernel is known to give realistic values.
+        # The kernel will only fit with the tau_rise, tau_decay and normalizer
+        # given below, as those values are fitted to this kernel.
+        kernel = [1.10167120e-16, -3.21767675e-16, 8.50309087e-16,
+                  -2.10825843e-15, 4.98932743e-15, -1.13729372e-14,
+                  2.50921741e-14, -5.37078004e-14, 1.11562884e-13,
+                  -2.24559409e-13, 4.36342190e-13, -8.12519563e-13,
+                  1.43109033e-12, -2.32320376e-12, 3.23745828e-12,
+                  -3.04445770e-12, -9.35353620e-13, 2.13181578e-11,
+                  -1.10221233e-10, 1.13624809e-10, 2.63285290e-11,
+                  9.84213201e-09, 1.30181595e-08, 1.13629411e-08,
+                  8.39004294e-09, 5.30052880e-09, 3.57433098e-09,
+                  2.20725487e-09, 1.44674216e-09, 8.93289079e-10,
+                  5.70139073e-10, 3.51097967e-10, 2.20241171e-10,
+                  1.35573201e-10, 8.42163899e-11, 5.18446572e-11,
+                  3.20279475e-11, 1.97108533e-11, 1.21370068e-11,
+                  7.46330397e-12, 4.58550766e-12]
+
+        # Create, Connect, Simulate
+        tau_rise = [1 / 0.4137949562815958]
+        tau_decay = [1 / 0.9631522808240071]
+        normalizer = [2.6512177702898558e-08]
+
+        lfp = nest.Create('lfp_detector', 1, {'tau_rise': tau_rise,
+                                              'tau_decay': tau_decay,
+                                              'normalizer': normalizer})
+        parrot = nest.Create('parrot_neuron', 50)
+        multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
+        spikes = nest.Create('spike_detector')
+        p_generator = nest.Create('poisson_generator', 1, {'rate': 400.})
+
+        nest.Connect(p_generator, parrot)
+        nest.Connect(parrot, lfp, 'all_to_all',
+                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(multi, lfp)
+        nest.Connect(parrot, spikes)
+
+        simtime = 600.
+        nest.Simulate(simtime)
+
+        lfp_nest = nest.GetStatus(multi)[0]['events']['lfp']
+
+        # Get spiking rate
+        spike_times = nest.GetStatus(spikes)[0]['events']['times']
+        rate = [0] * int(simtime-1)
+        for t in spike_times:
+            t_rounded = math.floor(t)
+            rate[t_rounded-1] += 1
+
+        # Convolve kernel with the spiking rate to get realistic values
+        lfp_convolution = np.convolve(rate, kernel, 'same')
+
+        for count in range(len(lfp_nest)):
+            # lfp is given in mV, and should not be bigger than 1 mV.
+            self.assertTrue(abs(lfp_nest[count]) < 1.)
+            self.assertAlmostEqual(lfp_nest[count],
+                                   lfp_convolution[count], 6)
 
     def test_three_population_network(self):
         """LFP is sum invariant"""
