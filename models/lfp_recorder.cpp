@@ -129,11 +129,6 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
         throw BadProperty(
           "All synaptic time constants must be strictly positive" );
       }
-      if ( tau_decay[ i ] < tau_rise[ i ] )
-      {
-        throw BadProperty(
-          "Synaptic rise time must be smaller than or equal to decay time." ); // TODO: Denne slår ut noen ganger, ikke relevant for oss?
-      }
     }
   }
 

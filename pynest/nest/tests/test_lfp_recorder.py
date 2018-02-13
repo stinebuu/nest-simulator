@@ -25,6 +25,7 @@ Tests for the lfp_recorder
 
 import unittest
 import nest
+import numpy as np
 
 
 @nest.check_stack
@@ -253,6 +254,89 @@ class LFPRecorderTestCase(unittest.TestCase):
         for count in range(len(collected_lfp)):
             self.assertAlmostEqual(collected_lfp[count],
                                    gs[0]['events']['lfp'][count])
+
+    def test_three_population_network(self):
+        """LFP is sum invariant"""
+        N = 3  # Number of neurons
+        T = 100.  # Simulation time
+        tau_rise = [1 / a for a in [0.48886579219795934,
+                                    0.9035914068978077,
+                                    0.1930894552692974,
+                                    0.9093497442449103,
+                                    0.41639118548249265,
+                                    0.9034399617801607,
+                                    0.2617577871858636,
+                                    0.9059096122950062,
+                                    0.710567063977332]]
+        tau_decay = [1 / b for b in [0.48856915462005396,
+                                     1.3469868506112692,
+                                     0.32806051756797333,
+                                     1.3498529711342273,
+                                     0.41132039426568,
+                                     1.3468658588833944,
+                                     0.26070589459724114,
+                                     1.3481709833572588,
+                                     0.7107727064429461]]
+
+        # First we get individual LFP contribution
+        borders = [n for i in range(5, 8) for n in [i, i]]
+        pg = nest.Create('poisson_generator', 1, {'rate': 80000.})
+        lfp = [nest.Create('lfp_recorder', 1,
+                           {'tau_rise': tau_rise,
+                            'tau_decay': tau_decay,
+                            'borders': borders}) for i in range(N)]
+
+        neurons = [nest.Create('iaf_psc_alpha') for i in range(N)]
+        mm = [nest.Create('multimeter', 1, {'record_from': ['lfp']})
+              for i in range(N)]
+
+        for i in range(N):
+            nest.Connect(pg, neurons[i])
+            nest.Connect(neurons[i], lfp[i], 'one_to_one',
+                         {'model': 'static_synapse', 'receptor_type': 1})
+            nest.Connect(mm[i], lfp[i])
+            for j in range(N):
+                nest.Connect(neurons[i], neurons[j])
+
+        nest.Simulate(T)
+
+        recorded_lfp = [nest.GetStatus(multi)[0]['events']['lfp']
+                        for multi in mm]
+        # Check that every LFP detector recorded something
+        for individual in recorded_lfp:
+            self.assertTrue(np.sum(individual) > 0.)
+
+        # Manual sum of LFP contributions
+        sum_of_recorded_lfp = np.sum(recorded_lfp, axis=0)
+
+        # Then we get the summed LFP contribution
+        nest.ResetKernel()
+        borders = [n for i in range(3, 6) for n in [i, i]]
+        pg = nest.Create('poisson_generator', 1, {'rate': 80000.})
+        lfp = nest.Create('lfp_recorder', 1,
+                          {'tau_rise': tau_rise,
+                           'tau_decay': tau_decay,
+                           'borders': borders})
+        neurons = [nest.Create('iaf_psc_alpha') for i in range(N)]
+        mm = nest.Create('multimeter', 1, {'record_from': ['lfp']})
+
+        for i in range(N):
+            nest.Connect(pg, neurons[i])
+            nest.Connect(neurons[i], lfp, 'one_to_one',
+                         {'model': 'static_synapse', 'receptor_type': 1})
+            for j in range(N):
+                nest.Connect(neurons[i], neurons[j])
+        nest.Connect(mm, lfp)
+
+        nest.Simulate(T)
+
+        recorded_lfp_sum = nest.GetStatus(mm)[0]['events']['lfp']
+        # Check that LFP detector recorded something
+        self.assertTrue(np.sum(recorded_lfp_sum) > 0.)
+
+        # LFP values should be (almost) equal
+        np.testing.assert_array_almost_equal(sum_of_recorded_lfp,
+                                             recorded_lfp_sum)
 
 
 def suite():
