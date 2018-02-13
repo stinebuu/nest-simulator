@@ -1,5 +1,5 @@
 /*
- *  lfp_recorder.cpp
+ *  lfp_detector.cpp
  *
  *  This file is part of NEST.
  *
@@ -20,7 +20,7 @@
  *
  */
 
-#include "lfp_recorder.h"
+#include "lfp_detector.h"
 
 // Includes from libnestutil:
 #include "numerics.h"
@@ -35,7 +35,7 @@
  * Recordables map
  * ---------------------------------------------------------------- */
 
-nest::RecordablesMap< nest::lfp_recorder > nest::lfp_recorder::recordablesMap_;
+nest::RecordablesMap< nest::lfp_detector > nest::lfp_detector::recordablesMap_;
 
 namespace nest // template specialization must be placed in namespace
 {
@@ -43,11 +43,11 @@ namespace nest // template specialization must be placed in namespace
 // for each quantity to be recorded.
 template <>
 void
-RecordablesMap< lfp_recorder >::create()
+RecordablesMap< lfp_detector >::create()
 {
   // use standard names wherever you can for consistency!
   insert_(
-    Name( "lfp" ), &lfp_recorder::get_y_elem_< lfp_recorder::State_::G > );
+    Name( "lfp" ), &lfp_detector::get_y_elem_< lfp_detector::State_::G > );
 }
 
 /* ----------------------------------------------------------------
@@ -56,24 +56,24 @@ RecordablesMap< lfp_recorder >::create()
 
 // TODO: Do something about these parameter initializations, they are not
 // sensible
-lfp_recorder::Parameters_::Parameters_()
+lfp_detector::Parameters_::Parameters_()
   : tau_rise( 1, 2.0 )   // ms
   , tau_decay( 1, 20.0 ) // ms
   , normalizer( 1, 1 )
 {
 }
 
-lfp_recorder::State_::State_( const Parameters_& p )
+lfp_detector::State_::State_( const Parameters_& p )
   : y_( STATE_VECTOR_MIN_SIZE, 0.0 )
 {
 }
 
-lfp_recorder::State_::State_( const State_& s )
+lfp_detector::State_::State_( const State_& s )
 {
   y_ = s.y_;
 }
 
-lfp_recorder::State_& lfp_recorder::State_::operator=( const State_& s )
+lfp_detector::State_& lfp_detector::State_::operator=( const State_& s )
 {
   assert( this != &s ); // would be bad logical error in program
 
@@ -86,7 +86,7 @@ lfp_recorder::State_& lfp_recorder::State_::operator=( const State_& s )
  * ---------------------------------------------------------------- */
 
 void
-lfp_recorder::Parameters_::get( DictionaryDatum& d ) const
+lfp_detector::Parameters_::get( DictionaryDatum& d ) const
 {
   def< size_t >( d, names::n_receptors, n_receptors() );
   ArrayDatum tau_rise_ad( tau_rise );
@@ -100,7 +100,7 @@ lfp_recorder::Parameters_::get( DictionaryDatum& d ) const
 }
 
 void
-lfp_recorder::Parameters_::set( const DictionaryDatum& d )
+lfp_detector::Parameters_::set( const DictionaryDatum& d )
 {
   const size_t old_n_receptors = n_receptors();
 
@@ -160,7 +160,7 @@ lfp_recorder::Parameters_::set( const DictionaryDatum& d )
 }
 
 void
-lfp_recorder::State_::get( DictionaryDatum& d ) const
+lfp_detector::State_::get( DictionaryDatum& d ) const
 {
   std::vector< double >* dg = new std::vector< double >();
   std::vector< double >* g = new std::vector< double >();
@@ -180,16 +180,16 @@ lfp_recorder::State_::get( DictionaryDatum& d ) const
 }
 
 void
-lfp_recorder::State_::set( const DictionaryDatum& d )
+lfp_detector::State_::set( const DictionaryDatum& d )
 {
 }
 
-lfp_recorder::Buffers_::Buffers_( lfp_recorder& n )
+lfp_detector::Buffers_::Buffers_( lfp_detector& n )
   : logger_( n )
 {
 }
 
-lfp_recorder::Buffers_::Buffers_( const Buffers_& b, lfp_recorder& n )
+lfp_detector::Buffers_::Buffers_( const Buffers_& b, lfp_detector& n )
   : logger_( n )
 {
 }
@@ -198,7 +198,7 @@ lfp_recorder::Buffers_::Buffers_( const Buffers_& b, lfp_recorder& n )
  * Default and copy constructor for node, and destructor
  * ---------------------------------------------------------------- */
 
-lfp_recorder::lfp_recorder()
+lfp_detector::lfp_detector()
   : Archiving_Node()
   , P_()
   , S_( P_ )
@@ -207,7 +207,7 @@ lfp_recorder::lfp_recorder()
   recordablesMap_.create();
 }
 
-lfp_recorder::lfp_recorder( const lfp_recorder& n )
+lfp_detector::lfp_detector( const lfp_detector& n )
   : Archiving_Node( n )
   , P_( n.P_ )
   , S_( n.S_ )
@@ -215,7 +215,7 @@ lfp_recorder::lfp_recorder( const lfp_recorder& n )
 {
 }
 
-lfp_recorder::~lfp_recorder()
+lfp_detector::~lfp_detector()
 {
 }
 
@@ -224,14 +224,14 @@ lfp_recorder::~lfp_recorder()
  * ---------------------------------------------------------------- */
 
 void
-lfp_recorder::init_state_( const Node& proto )
+lfp_detector::init_state_( const Node& proto )
 {
-  const lfp_recorder& pr = downcast< lfp_recorder >( proto );
+  const lfp_detector& pr = downcast< lfp_detector >( proto );
   S_ = pr.S_;
 }
 
 void
-lfp_recorder::init_buffers_()
+lfp_detector::init_buffers_()
 {
   B_.spikes_.clear(); // includes resize
   Archiving_Node::clear_history();
@@ -240,7 +240,7 @@ lfp_recorder::init_buffers_()
 }
 
 void
-lfp_recorder::calibrate()
+lfp_detector::calibrate()
 {
   // Ensures initialization in case mm connected after Simulate
   B_.logger_.init();
@@ -347,7 +347,7 @@ lfp_recorder::calibrate()
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 void
-lfp_recorder::update( Time const& origin, const long from, const long to )
+lfp_detector::update( Time const& origin, const long from, const long to )
 {
   assert(
     to >= 0 && ( delay ) from < kernel().connection_manager.get_min_delay() );
@@ -380,7 +380,7 @@ lfp_recorder::update( Time const& origin, const long from, const long to )
 }
 
 port
-lfp_recorder::handles_test_event( SpikeEvent&, rport receptor_type )
+lfp_detector::handles_test_event( SpikeEvent&, rport receptor_type )
 {
   if ( receptor_type <= 0
     || receptor_type > static_cast< port >( P_.n_receptors() ) )
@@ -391,7 +391,7 @@ lfp_recorder::handles_test_event( SpikeEvent&, rport receptor_type )
 }
 
 void
-lfp_recorder::handle( SpikeEvent& e )
+lfp_detector::handle( SpikeEvent& e )
 {
   if ( e.get_weight() < 0 )
   {
@@ -454,13 +454,13 @@ lfp_recorder::handle( SpikeEvent& e )
 }
 
 void
-lfp_recorder::handle( DataLoggingRequest& e )
+lfp_detector::handle( DataLoggingRequest& e )
 {
   B_.logger_.handle( e );
 }
 
 long
-lfp_recorder::get_pop_of_gid( const index& gid ) const
+lfp_detector::get_pop_of_gid( const index& gid ) const
 {
   long pop = -1;
   // Iterate over borders to find the population of the GID.

@@ -1,5 +1,5 @@
 /*
- *  lfp_recorder.h
+ *  lfp_detector.h
  *
  *  This file is part of NEST.
  *
@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef LFP_RECORDER_H
-#define LFP_RECORDER_H
+#ifndef LFP_DETECTOR_H
+#define LFP_DETECTOR_H
 
 // Includes from nestkernel:
 #include "archiving_node.h"
@@ -43,13 +43,13 @@ namespace nest
  * TODO: Documentation, for all functions
  */
 
-class lfp_recorder : public Archiving_Node
+class lfp_detector : public Archiving_Node
 {
 
 public:
-  lfp_recorder();
-  lfp_recorder( const lfp_recorder& );
-  virtual ~lfp_recorder();
+  lfp_detector();
+  lfp_detector( const lfp_detector& );
+  virtual ~lfp_detector();
 
   /**
    * Import sets of overloaded virtual functions.
@@ -79,8 +79,8 @@ private:
   long get_pop_of_gid( const index& ) const;
 
   // The next two classes need to be friends to access the State_ class/member
-  friend class RecordablesMap< lfp_recorder >;
-  friend class UniversalDataLogger< lfp_recorder >;
+  friend class RecordablesMap< lfp_detector >;
+  friend class UniversalDataLogger< lfp_detector >;
 
   // ----------------------------------------------------------------
 
@@ -156,11 +156,11 @@ private:
    */
   struct Buffers_
   {
-    Buffers_( lfp_recorder& );
-    Buffers_( const Buffers_&, lfp_recorder& );
+    Buffers_( lfp_detector& );
+    Buffers_( const Buffers_&, lfp_detector& );
 
     //! Logger for all analog data
-    UniversalDataLogger< lfp_recorder > logger_;
+    UniversalDataLogger< lfp_detector > logger_;
 
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
@@ -218,11 +218,11 @@ private:
   /** @} */
 
   //! Mapping of recordables names to access functions
-  static RecordablesMap< lfp_recorder > recordablesMap_;
+  static RecordablesMap< lfp_detector > recordablesMap_;
 };
 
 inline port
-lfp_recorder::send_test_event( Node& target,
+lfp_detector::send_test_event( Node& target,
   rport receptor_type,
   synindex,
   bool )
@@ -234,7 +234,7 @@ lfp_recorder::send_test_event( Node& target,
 }
 
 inline port
-lfp_recorder::handles_test_event( DataLoggingRequest& dlr, rport receptor_type )
+lfp_detector::handles_test_event( DataLoggingRequest& dlr, rport receptor_type )
 {
   if ( receptor_type != 0 )
   {
@@ -244,7 +244,7 @@ lfp_recorder::handles_test_event( DataLoggingRequest& dlr, rport receptor_type )
 }
 
 inline void
-lfp_recorder::get_status( DictionaryDatum& d ) const
+lfp_detector::get_status( DictionaryDatum& d ) const
 {
   P_.get( d );
   S_.get( d );
@@ -253,7 +253,7 @@ lfp_recorder::get_status( DictionaryDatum& d ) const
 }
 
 inline void
-lfp_recorder::set_status( const DictionaryDatum& d )
+lfp_detector::set_status( const DictionaryDatum& d )
 {
   Parameters_ ptmp = P_; // temporary copy in case of errors
   ptmp.set( d );         // throws if BadProperty
@@ -267,4 +267,4 @@ lfp_recorder::set_status( const DictionaryDatum& d )
 
 } // namespace
 
-#endif // LFP_RECORDER_H //
+#endif // LFP_DETECTOR_H //

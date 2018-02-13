@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# test_lfp_recorder.py
+# test_lfp_detector.py
 #
 # This file is part of NEST.
 #
@@ -20,7 +20,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests for the lfp_recorder
+Tests for the lfp_detector
 """
 
 import unittest
@@ -29,8 +29,8 @@ import numpy as np
 
 
 @nest.check_stack
-class LFPRecorderTestCase(unittest.TestCase):
-    """lfp_recorder tests"""
+class LFPDetectorTestCase(unittest.TestCase):
+    """lfp_detector tests"""
 
     def setUp(self):
         nest.ResetKernel()
@@ -38,7 +38,7 @@ class LFPRecorderTestCase(unittest.TestCase):
     def test_SimpleNetwork(self):
         """Test that we record lfp after a spike"""
 
-        lfp = nest.Create('lfp_recorder', 1,
+        lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
@@ -61,8 +61,8 @@ class LFPRecorderTestCase(unittest.TestCase):
         """Test that accumulation of several lfp signals equals lfp signal of
         single detector"""
 
-        # First create several lfp_recorders, spike_generators and multimeters:
-        lfp1 = nest.Create('lfp_recorder', 1,
+        # First create several lfp_detectors, spike_generators and multimeters:
+        lfp1 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
@@ -70,7 +70,7 @@ class LFPRecorderTestCase(unittest.TestCase):
                                    {'spike_times': [10., 15., 20., 25., 30.,
                                                     35., 40., 45., 50., 55.]})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
-        lfp2 = nest.Create('lfp_recorder', 1,
+        lfp2 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
@@ -78,7 +78,7 @@ class LFPRecorderTestCase(unittest.TestCase):
                                    {'spike_times': [12., 17., 22., 27., 32.,
                                                     37., 42., 47., 52., 57.]})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
-        lfp3 = nest.Create('lfp_recorder', 1,
+        lfp3 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
@@ -110,14 +110,14 @@ class LFPRecorderTestCase(unittest.TestCase):
                          gs2[0]['events']['lfp'] +
                          gs3[0]['events']['lfp'])
 
-        # Now we set up a system with a single lfp_recorder. We still have
+        # Now we set up a system with a single lfp_detector. We still have
         # several spike generators.
         # The LFP signal from this sould equal the accumulation of the LFP
         # signals of the three lfp_recorders above.
 
         nest.ResetKernel()
 
-        lfp = nest.Create('lfp_recorder', 1,
+        lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
@@ -152,7 +152,7 @@ class LFPRecorderTestCase(unittest.TestCase):
         # should equal the two LFP signals from above.
         nest.ResetKernel()
 
-        lfp = nest.Create('lfp_recorder', 1,
+        lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
@@ -181,24 +181,24 @@ class LFPRecorderTestCase(unittest.TestCase):
                                    14)
 
     def test_SeveralDetectorsWithPoissonInput(self):
-        """Test lfp_recorder with poisson input"""
+        """Test lfp_detector with poisson input"""
         # This is basically the same test as above, but with poisson_generator
         # instead of spike_generators.
 
         # Create:
-        lfp1 = nest.Create('lfp_recorder', 1,
+        lfp1 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         p_generator1 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
-        lfp2 = nest.Create('lfp_recorder', 1,
+        lfp2 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         p_generator2 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
-        lfp3 = nest.Create('lfp_recorder', 1,
+        lfp3 = nest.Create('lfp_detector', 1,
                            {'tau_rise': [1 / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
@@ -231,7 +231,7 @@ class LFPRecorderTestCase(unittest.TestCase):
         # Single
         nest.ResetKernel()
 
-        lfp = nest.Create('lfp_recorder', 1,
+        lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': [1 / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
@@ -281,7 +281,7 @@ class LFPRecorderTestCase(unittest.TestCase):
         # First we get individual LFP contribution
         borders = [n for i in range(5, 8) for n in [i, i]]
         pg = nest.Create('poisson_generator', 1, {'rate': 80000.})
-        lfp = [nest.Create('lfp_recorder', 1,
+        lfp = [nest.Create('lfp_detector', 1,
                            {'tau_rise': tau_rise,
                             'tau_decay': tau_decay,
                             'borders': borders}) for i in range(N)]
@@ -313,7 +313,7 @@ class LFPRecorderTestCase(unittest.TestCase):
         nest.ResetKernel()
         borders = [n for i in range(3, 6) for n in [i, i]]
         pg = nest.Create('poisson_generator', 1, {'rate': 80000.})
-        lfp = nest.Create('lfp_recorder', 1,
+        lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': tau_rise,
                            'tau_decay': tau_decay,
                            'borders': borders})
