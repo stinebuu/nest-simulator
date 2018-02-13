@@ -278,12 +278,23 @@ class LFPDetectorTestCase(unittest.TestCase):
                                      1.3481709833572588,
                                      0.7107727064429461]]
 
+        normalizer = [0.00015807504272622632,
+                      1.1871740309906909e-05,
+                      -6.241511286160071e-06,
+                      4.84509284785128e-07,
+                      -9.825292432345066e-06,
+                      2.10407553698354e-06,
+                      -1.6348916609249954e-05,
+                      1.8102033694846387e-06,
+                      -0.002474980238314617]
+
         # First we get individual LFP contribution
         borders = [n for i in range(5, 8) for n in [i, i]]
         pg = nest.Create('poisson_generator', 1, {'rate': 80000.})
         lfp = [nest.Create('lfp_detector', 1,
                            {'tau_rise': tau_rise,
                             'tau_decay': tau_decay,
+                            'normalizer': normalizer,
                             'borders': borders}) for i in range(N)]
 
         neurons = [nest.Create('iaf_psc_alpha') for i in range(N)]
@@ -304,7 +315,7 @@ class LFPDetectorTestCase(unittest.TestCase):
                         for multi in mm]
         # Check that every LFP detector recorded something
         for individual in recorded_lfp:
-            self.assertTrue(np.sum(individual) > 0.)
+            self.assertFalse(np.sum(individual) == 0.)
 
         # Manual sum of LFP contributions
         sum_of_recorded_lfp = np.sum(recorded_lfp, axis=0)
@@ -316,6 +327,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         lfp = nest.Create('lfp_detector', 1,
                           {'tau_rise': tau_rise,
                            'tau_decay': tau_decay,
+                           'normalizer': normalizer,
                            'borders': borders})
         neurons = [nest.Create('iaf_psc_alpha') for i in range(N)]
         mm = nest.Create('multimeter', 1, {'record_from': ['lfp']})
@@ -332,7 +344,7 @@ class LFPDetectorTestCase(unittest.TestCase):
 
         recorded_lfp_sum = nest.GetStatus(mm)[0]['events']['lfp']
         # Check that LFP detector recorded something
-        self.assertTrue(np.sum(recorded_lfp_sum) > 0.)
+        self.assertFalse(np.sum(recorded_lfp_sum) == 0.)
 
         # LFP values should be (almost) equal
         np.testing.assert_array_almost_equal(sum_of_recorded_lfp,
@@ -340,7 +352,7 @@ class LFPDetectorTestCase(unittest.TestCase):
 
 
 def suite():
-    suite = unittest.makeSuite(LFPRecorderTestCase, 'test')
+    suite = unittest.makeSuite(LFPDetectorTestCase, 'test')
     return suite
 
 
