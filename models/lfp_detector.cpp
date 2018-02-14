@@ -47,7 +47,7 @@ RecordablesMap< lfp_detector >::create()
 {
   // use standard names wherever you can for consistency!
   insert_(
-    Name( "lfp" ), &lfp_detector::get_y_elem_< lfp_detector::State_::G > );
+    names::lfp, &lfp_detector::get_y_elem_< lfp_detector::State_::G > );
 }
 
 /* ----------------------------------------------------------------
@@ -95,8 +95,8 @@ lfp_detector::Parameters_::get( DictionaryDatum& d ) const
   ArrayDatum borders_ad( borders );
   def< ArrayDatum >( d, names::tau_rise, tau_rise_ad );
   def< ArrayDatum >( d, names::tau_decay, tau_decay_ad );
-  def< ArrayDatum >( d, Name( "normalizer" ), normalizer_ad );
-  def< ArrayDatum >( d, Name( "borders" ), borders_ad );
+  def< ArrayDatum >( d, names::normalizer, normalizer_ad );
+  def< ArrayDatum >( d, names::borders, borders_ad );
 }
 
 void
@@ -132,7 +132,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     }
   }
 
-  updateValue< std::vector< double > >( d, Name( "normalizer" ), normalizer );
+  updateValue< std::vector< double > >( d, names::normalizer, normalizer );
   if ( normalizer.size() != tau_rise.size() )
   {
     throw BadProperty(
@@ -147,7 +147,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
       "connections." );
   }
 
-  if ( updateValue< std::vector< long > >( d, Name( "borders" ), borders )
+  if ( updateValue< std::vector< long > >( d, names::borders, borders )
     && borders.size() != 0 )
   {
     if ( borders.size() / 2.0 != num_populations )

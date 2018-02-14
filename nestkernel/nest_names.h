@@ -77,7 +77,8 @@ extern const Name b;    //!< Specific to Brette & Gerstner 2005 (aeif_cond-*)
 extern const Name beta; //!< Specific to amat2_*
 extern const Name
   beta_Ca; //!< Increment in calcium concentration with each spike
-extern const Name binary; //!< Recorder parameter
+extern const Name binary;  //!< Recorder parameter
+extern const Name borders; //!< lfp_detector parameter
 
 extern const Name c;         //!< Specific to Izhikevich 2003
 extern const Name c_1;       //!< Specific to stochastic neuron pp_psc_delta
@@ -294,6 +295,7 @@ extern const Name
 extern const Name large_connector_limit; //! Cutoff for large connectors
 extern const Name len_kernel; //!< Specific to population point process model
                               //!< (pp_pop_psc_delta)
+extern const Name lfp;        //!< Local field potential
 extern const Name linear;     //!< Parameter for MSP growth curves
 extern const Name linear_summation;    //!< Specific to rate models
 extern const Name local;               //!< Node parameter
@@ -342,6 +344,7 @@ extern const Name node_uses_wfr;      //!< Node parameter
 extern const Name noise;              //!< Specific to iaf_chs_2008 neuron
                                       //!< and rate models
 extern const Name noisy_rate;         //!< Specific to rate models
+extern const Name normalizer;         //!< Normalizer factor
 extern const Name no_synapses;        //!< Used by stdp_connection_facetshw_hom
 extern const Name num_connections;    //!< In ConnBuilder
 extern const Name num_processes;      //!< Number of processes
