@@ -278,7 +278,7 @@ lfp_detector::calibrate()
   // Get GIDs of nodes connected to the LFP recorder.
   // TODO: Getting connections this way may introduce some excessive overhead to
   // simulations. Should reconsider implementation if it slows down simulation
-  // initialisation too much.
+  // initialization too much.
   std::deque< ConnectionID > connectome;
   std::vector< size_t > self_target;
   const TokenArray* self_source_a = 0;

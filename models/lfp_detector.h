@@ -32,15 +32,50 @@
 #include "universal_data_logger.h"
 
 
-/*
- * TODO: Documentation
- *
+/* BeginDocumentation
+ Name: lfp_detector - Device for calculating LFP signal.
+
+ Description:
+ The lfp_detector is a device for recording LFP signals. The detector can be
+ used to record from a single neuron, or several neurons at once. If you have
+ several neurons and several lfp_detector's, the sum of the LFP would equal the
+ LFP recorded by a single lfp_detector. The LFP is found by doing a convolution
+ between spike events and a beta function, as described by E. Hagen et al. in
+ "Hybrid scheme for modeling local field potentials from point-neuron networks."
+ in Cerebral Cortex (2016): 1-36. The modeling of the beta function is
+ described by A. Roth and M.C.W. van Rossum in Computational Modeling Methods
+ for Neuroscientists, MIT Press 2013, Chapter 6.
+
+ To get the LFP, you have to supply four arrays; "tau_rise", "tau_decay",
+ "normalizer" and "borders". "tau_rise" and "tau_decay" constitutes the time
+ constants in the beta function, while "normalizer" is the normalizing factor
+ of the function. "tau_rise", "tau_decay", and "normalizer" can thus be found
+ by optimizing the function
+   f(t) = n*tau_d*tau_r / (tau_d - tau_r) * ( exp( -t / tau_d ) - exp( -t / tau_r ) ),
+ where n = normalizer, tau_r = tau_rise and tau_d = tau_decay, against a double
+ exponential kernel.
+
+ "borders" stands for min and max gid of every population connected to the
+ lfp_generator. The LFP signal is taken from the target population, and we
+ therefore need the "border" array to find out which population the spike comes
+ from so that we can calculate the correct LFP.
+
+ The unit of the LFP signal is mV.
+
+ Receives: SpikeEvent, DataLoggingRequest
+
+ SeeAlso:
  */
 
 namespace nest
 {
 /**
- * TODO: Documentation, for all functions
+ * LFP detector
+ *
+ * It receives spikes via its handle(SpikeEvent&) method, and buffers them
+ * according to target population. The LFP is calculated by convoluting the
+ * spikes and a beta function in the update() method, and is then stored via
+ * its RecordingDevice in the same method.
  */
 
 class lfp_detector : public Archiving_Node
@@ -62,7 +97,7 @@ public:
   port send_test_event( Node&, rport, synindex, bool );
 
   void handle( SpikeEvent& );
-  void handle( DataLoggingRequest& ); // TODO: trenger vi denne?
+  void handle( DataLoggingRequest& );
 
   port handles_test_event( SpikeEvent&, rport );
   port handles_test_event( DataLoggingRequest&, rport );
@@ -96,7 +131,7 @@ private:
 
     std::vector< double > normalizer; //!< Normalizing factor.
 
-    std::vector< long > borders;
+    std::vector< long > borders;  //! Population borders
 
     Parameters_(); //!< Sets default parameter values
 
@@ -188,7 +223,7 @@ private:
   // Access functions for UniversalDataLogger -------------------------------
 
   //! Read out state vector elements, used by UniversalDataLogger and
-  // RecordablesMap
+  //! RecordablesMap
   template < State_::StateVecElems elem >
   double
   get_y_elem_() const
