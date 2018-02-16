@@ -51,7 +51,8 @@
  constants in the beta function, while "normalizer" is the normalizing factor
  of the function. "tau_rise", "tau_decay", and "normalizer" can thus be found
  by optimizing the function
-   f(t) = n*tau_d*tau_r / (tau_d - tau_r) * ( exp( -t / tau_d ) - exp( -t / tau_r ) ),
+   f(t) = n*tau_d*tau_r / (tau_d - tau_r) * ( exp( -t / tau_d ) -
+          exp( -t / tau_r ) ),
  where n = normalizer, tau_r = tau_rise and tau_d = tau_decay, against a double
  exponential kernel.
 
@@ -131,7 +132,7 @@ private:
 
     std::vector< double > normalizer; //!< Normalizing factor.
 
-    std::vector< long > borders;  //! Population borders
+    std::vector< long > borders; //! Population borders
 
     Parameters_(); //!< Sets default parameter values
 

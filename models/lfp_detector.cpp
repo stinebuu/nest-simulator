@@ -46,20 +46,17 @@ void
 RecordablesMap< lfp_detector >::create()
 {
   // use standard names wherever you can for consistency!
-  insert_(
-    names::lfp, &lfp_detector::get_y_elem_< lfp_detector::State_::G > );
+  insert_( names::lfp, &lfp_detector::get_y_elem_< lfp_detector::State_::G > );
 }
 
 /* ----------------------------------------------------------------
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
-// TODO: Do something about these parameter initializations, they are not
-// sensible
 lfp_detector::Parameters_::Parameters_()
-  : tau_rise( 1, 2.0 )   // ms
-  , tau_decay( 1, 20.0 ) // ms
-  , normalizer( 1, 1 )
+  : tau_rise( 1, 2.0468 )        // ms
+  , tau_decay( 1, 2.0456 )       // ms
+  , normalizer( 1, 1.58075e-04 ) // mV / ms
 {
 }
 
@@ -285,9 +282,6 @@ lfp_detector::calibrate()
   long synapse_label = UNLABELED_CONNECTION;
   self_target.push_back( this->get_gid() );
   const TokenArray self_target_a = TokenArray( self_target );
-  //  const TokenArray* target_a = 0;
-  //  target_a = dynamic_cast< TokenArray const* >( TokenArray( self_target ) );
-  //  *target_a = TokenArray( self_target );
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
         ++syn_id )
@@ -393,12 +387,6 @@ lfp_detector::handles_test_event( SpikeEvent&, rport receptor_type )
 void
 lfp_detector::handle( SpikeEvent& e )
 {
-  if ( e.get_weight() < 0 )
-  {
-    throw BadProperty(
-      "Synaptic weights for conductance-based multisynapse models "
-      "must be positive." );
-  }
   assert( e.get_delay() > 0 );
 
   long source_pop = 0;
