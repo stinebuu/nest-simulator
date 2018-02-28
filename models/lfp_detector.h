@@ -125,12 +125,19 @@ private:
    */
   struct Parameters_
   {
-    std::vector< double > tau_rise;  //!< Rise time of synaptic conductance
-                                     //!< in ms.
-    std::vector< double > tau_decay; //!< Decay time of synaptic conductance
-                                     //!< in ms.
+    std::vector< double > tau_rise;   //!< Rise time of synaptic conductance
+                                      //!< in ms for the first exponential.
+    std::vector< double > tau_decay;  //!< Decay time of synaptic conductance
+                                      //!< in ms for the first exponential.
+    std::vector< double > tau_rise2;  //!< Rise time of synaptic conductance
+                                      //!< in ms for the second exponential.
+    std::vector< double > tau_decay2; //!< Decay time of synaptic conductance
+                                      //!< in ms for the second exponential.
 
-    std::vector< double > normalizer; //!< Normalizing factor.
+    std::vector< double >
+      normalizer; //!< Normalizing factor for the first exponential.
+    std::vector< double >
+      normalizer2; //!< Normalizing factor for the second exponential.
 
     std::vector< long > borders; //! Population borders
 
@@ -174,7 +181,8 @@ private:
 
     static const size_t NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR = 2; // DG, G
 
-    std::vector< double > y_; //!< neuron state
+    std::vector< double > y_;  //!< neuron state
+    std::vector< double > y2_; //!< second neuron state
 
     State_( const Parameters_& ); //!< Default initialization
     State_( const State_& );
@@ -211,10 +219,14 @@ private:
   struct Variables_
   {
     std::vector< double > normalizer_;
+    std::vector< double > normalizer2_;
 
     std::vector< double > P11_syn_;
     std::vector< double > P21_syn_;
     std::vector< double > P22_syn_;
+    std::vector< double > P11_syn2_;
+    std::vector< double > P21_syn2_;
+    std::vector< double > P22_syn2_;
 
     unsigned int receptor_types_size_;
 
@@ -234,6 +246,8 @@ private:
     {
       tot_lfp +=
         S_.y_[ elem + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      tot_lfp +=
+        S_.y2_[ elem + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
     }
     return tot_lfp;
   }

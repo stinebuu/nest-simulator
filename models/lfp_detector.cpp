@@ -54,20 +54,25 @@ RecordablesMap< lfp_detector >::create()
  * ---------------------------------------------------------------- */
 
 lfp_detector::Parameters_::Parameters_()
-  : tau_rise( 1, 2.0468 )        // ms
-  , tau_decay( 1, 2.0456 )       // ms
-  , normalizer( 1, 1.58075e-04 ) // mV / ms
+  : tau_rise( 1, 2.0468 )         // ms
+  , tau_decay( 1, 2.0456 )        // ms
+  , tau_rise2( 1, 2.0468 )        // ms
+  , tau_decay2( 1, 2.0456 )       // ms
+  , normalizer( 1, 1.58075e-04 )  // mV / ms
+  , normalizer2( 1, 1.58075e-04 ) // mV / ms
 {
 }
 
 lfp_detector::State_::State_( const Parameters_& p )
   : y_( STATE_VECTOR_MIN_SIZE, 0.0 )
+  , y2_( STATE_VECTOR_MIN_SIZE, 0.0 )
 {
 }
 
 lfp_detector::State_::State_( const State_& s )
 {
   y_ = s.y_;
+  y2_ = s.y2_;
 }
 
 lfp_detector::State_& lfp_detector::State_::operator=( const State_& s )
@@ -75,6 +80,7 @@ lfp_detector::State_& lfp_detector::State_::operator=( const State_& s )
   assert( this != &s ); // would be bad logical error in program
 
   y_ = s.y_;
+  y2_ = s.y2_;
   return *this;
 }
 
@@ -89,10 +95,16 @@ lfp_detector::Parameters_::get( DictionaryDatum& d ) const
   ArrayDatum tau_rise_ad( tau_rise );
   ArrayDatum tau_decay_ad( tau_decay );
   ArrayDatum normalizer_ad( normalizer );
+  ArrayDatum tau_rise2_ad( tau_rise2 );
+  ArrayDatum tau_decay2_ad( tau_decay2 );
+  ArrayDatum normalizer2_ad( normalizer2 );
   ArrayDatum borders_ad( borders );
   def< ArrayDatum >( d, names::tau_rise, tau_rise_ad );
   def< ArrayDatum >( d, names::tau_decay, tau_decay_ad );
   def< ArrayDatum >( d, names::normalizer, normalizer_ad );
+  def< ArrayDatum >( d, Name( "tau_rise2" ), tau_rise2_ad );
+  def< ArrayDatum >( d, Name( "tau_decay2" ), tau_decay2_ad );
+  def< ArrayDatum >( d, Name( "normalizer2" ), normalizer2_ad );
   def< ArrayDatum >( d, names::borders, borders_ad );
 }
 
@@ -105,15 +117,23 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     updateValue< std::vector< double > >( d, names::tau_rise, tau_rise );
   bool taud_flag =
     updateValue< std::vector< double > >( d, names::tau_decay, tau_decay );
-  if ( tau_rise.size() != tau_decay.size() )
+  bool tau2r_flag =
+    updateValue< std::vector< double > >( d, Name( "tau_rise2" ), tau_rise2 );
+  bool tau2d_flag =
+    updateValue< std::vector< double > >( d, Name( "tau_decay2" ), tau_decay2 );
+  if ( tau_rise.size() != tau_decay.size()
+    or tau_rise.size() != tau_rise2.size()
+    or tau_rise.size() != tau_decay2.size() )
   {
     throw BadProperty( "Tau coefficient arrays must have the same length." );
   }
-  if ( taur_flag || taud_flag )
+  if ( taur_flag or taud_flag or tau2r_flag or tau2d_flag )
   { // receptor arrays have been modified
-    if ( ( tau_rise.size() != old_n_receptors
-           || tau_decay.size() != old_n_receptors )
-      && ( not taur_flag || not taud_flag ) )
+    if ( ( tau_rise.size() != old_n_receptors // TODO: needed?
+           or tau_decay.size() != old_n_receptors
+           or tau_rise2.size() != old_n_receptors
+           or tau_decay2.size() != old_n_receptors )
+      && ( not taur_flag or not taud_flag ) )
     {
       throw BadProperty(
         "If the number of receptor ports is changed, the two arrays "
@@ -121,7 +141,8 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     }
     for ( size_t i = 0; i < tau_rise.size(); ++i )
     {
-      if ( tau_rise[ i ] <= 0 || tau_decay[ i ] <= 0 )
+      if ( tau_rise[ i ] <= 0 or tau_decay[ i ] <= 0 or tau_rise2[ i ] <= 0
+        or tau_decay2[ i ] <= 0 )
       {
         throw BadProperty(
           "All synaptic time constants must be strictly positive" );
@@ -136,12 +157,19 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
       "normalizer array must have same length as the tau arrays." );
   }
 
+  updateValue< std::vector< double > >( d, Name( "normalizer2" ), normalizer2 );
+  if ( normalizer2.size() != tau_rise.size() )
+  {
+    throw BadProperty(
+      "normalizer2 array must have same length as the tau arrays." );
+  }
+
   double num_populations = std::sqrt( tau_rise.size() );
   if ( num_populations != std::floor( num_populations ) )
   {
     throw BadProperty(
-      "Must provide coefficients for all combinations of population "
-      "connections." );
+      "Must provide coefficients for correct number of combinations of "
+      "population connections." );
   }
 
   if ( updateValue< std::vector< long > >( d, names::borders, borders )
@@ -166,10 +194,14 @@ lfp_detector::State_::get( DictionaryDatum& d ) const
         i < ( y_.size() / State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR );
         ++i )
   {
-    dg->push_back( y_[ State_::DG
-      + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] );
-    g->push_back( y_[ State_::G
-      + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] );
+    dg->push_back(
+      y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+      + y2_[ State_::DG
+          + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] );
+    g->push_back(
+      y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+      + y2_[ State_::G
+          + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] );
   }
 
   ( *d )[ names::dg ] = DoubleVectorDatum( dg );
@@ -249,14 +281,20 @@ lfp_detector::calibrate()
   V_.P11_syn_.resize( P_.n_receptors() );
   V_.P21_syn_.resize( P_.n_receptors() );
   V_.P22_syn_.resize( P_.n_receptors() );
+  V_.P11_syn2_.resize( P_.n_receptors() );
+  V_.P21_syn2_.resize( P_.n_receptors() );
+  V_.P22_syn2_.resize( P_.n_receptors() );
 
   S_.y_.resize(
+    State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
+  S_.y2_.resize(
     State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
 
   B_.spikes_.resize( P_.n_receptors() );
 
   // normalizer_ will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
+  V_.normalizer2_.resize( P_.n_receptors() );
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
@@ -267,7 +305,23 @@ lfp_detector::calibrate()
                          / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
+    if ( P_.normalizer2[ i ] != 0 )
+    {
+      V_.P11_syn2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
+      V_.P22_syn2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
+      V_.P21_syn2_[ i ] = ( ( P_.tau_decay2[ i ] * P_.tau_rise2[ i ] )
+                            / ( P_.tau_decay2[ i ] - P_.tau_rise2[ i ] ) )
+        * ( V_.P11_syn2_[ i ] - V_.P22_syn2_[ i ] );
+    }
+    else
+    {
+      V_.P11_syn2_[ i ] = 0;
+      V_.P22_syn2_[ i ] = 0;
+      V_.P21_syn2_[ i ] = 0;
+    }
+
     V_.normalizer_[ i ] = P_.normalizer[ i ];
+    V_.normalizer2_[ i ] = P_.normalizer2[ i ];
 
     B_.spikes_[ i ].resize();
   }
@@ -351,6 +405,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
   {
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
+      // Contribution from first exponential
       S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                            * i ) ] = V_.P21_syn_[ i ]
           * S_.y_[ State_::DG
@@ -358,13 +413,27 @@ lfp_detector::update( Time const& origin, const long from, const long to )
         + V_.P22_syn_[ i ]
           * S_.y_[ State_::G
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      // Contribution from second exponential
+      S_.y2_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                            * i ) ] = V_.P21_syn2_[ i ]
+          * S_.y2_[ State_::DG
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn2_[ i ]
+          * S_.y2_[ State_::G
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
+      // Contribution from first exponential
       S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                             * i ) ] *= V_.P11_syn_[ i ];
-
       S_.y_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value( lag );
+        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value_wfr_update( lag );
+      // Contribution from second exponential
+      S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                             * i ) ] *= V_.P11_syn2_[ i ];
+      S_.y2_[ State_::DG
+        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
+        V_.normalizer2_[ i ] * B_.spikes_[ i ].get_value( lag );
     }
 
     // log state data
