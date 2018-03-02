@@ -59,7 +59,7 @@ lfp_detector::Parameters_::Parameters_()
   , tau_rise2( 1, 2.0468 )        // ms
   , tau_decay2( 1, 2.0456 )       // ms
   , normalizer( 1, 1.58075e-04 )  // mV / ms
-  , normalizer2( 1, 1.58075e-04 ) // mV / ms
+  , normalizer2( 1, 0 ) // mV / ms
 {
 }
 
@@ -121,12 +121,19 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     updateValue< std::vector< double > >( d, Name( "tau_rise2" ), tau_rise2 );
   bool tau2d_flag =
     updateValue< std::vector< double > >( d, Name( "tau_decay2" ), tau_decay2 );
-  if ( tau_rise.size() != tau_decay.size()
-    or tau_rise.size() != tau_rise2.size()
-    or tau_rise.size() != tau_decay2.size() )
+
+  if ( tau_rise.size() != tau_decay.size() )
   {
     throw BadProperty( "Tau coefficient arrays must have the same length." );
   }
+
+  if( tau_rise2.size() != 1 and
+      ( tau_rise.size() != tau_rise2.size() or
+        tau_rise.size() != tau_decay2.size() ) )
+  {
+    throw BadProperty( "Tau coefficient arrays must have the same length." );
+  }
+
   if ( taur_flag or taud_flag or tau2r_flag or tau2d_flag )
   { // receptor arrays have been modified
     if ( ( tau_rise.size() != old_n_receptors // TODO: needed?
@@ -158,7 +165,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
   }
 
   updateValue< std::vector< double > >( d, Name( "normalizer2" ), normalizer2 );
-  if ( normalizer2.size() != tau_rise.size() )
+  if ( normalizer2.size() != tau_rise2.size() )
   {
     throw BadProperty(
       "normalizer2 array must have same length as the tau arrays." );
@@ -292,9 +299,10 @@ lfp_detector::calibrate()
 
   B_.spikes_.resize( P_.n_receptors() );
 
-  // normalizer_ will be initialized in the loop below.
+  // normalizers will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
   V_.normalizer2_.resize( P_.n_receptors() );
+  V_.connection_normalizer_.resize( P_.n_receptors() );
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
@@ -305,7 +313,7 @@ lfp_detector::calibrate()
                          / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
 
-    if ( P_.normalizer2[ i ] != 0 )
+    if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
     {
       V_.P11_syn2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
       V_.P22_syn2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
@@ -323,6 +331,10 @@ lfp_detector::calibrate()
     V_.normalizer_[ i ] = P_.normalizer[ i ];
     V_.normalizer2_[ i ] = P_.normalizer2[ i ];
 
+    // Need to initialize the connection_normalizer_ with one and then find the
+    // number of connections below
+    V_.connection_normalizer_[ i ] = 1;
+
     B_.spikes_[ i ].resize();
   }
 
@@ -334,8 +346,11 @@ lfp_detector::calibrate()
   std::vector< size_t > self_target;
   const TokenArray* self_source_a = 0;
   long synapse_label = UNLABELED_CONNECTION;
+  // The gid of the lfp_detector
   self_target.push_back( this->get_gid() );
   const TokenArray self_target_a = TokenArray( self_target );
+
+  // We first find all connections to the lfp_detector
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
         ++syn_id )
@@ -347,6 +362,8 @@ lfp_detector::calibrate()
   // Get all targets of these neurons.
   std::vector< size_t > n_sources;
   const TokenArray* target_a = 0;
+
+  // All source gids that are connected to the lfp_detector
   for ( std::deque< ConnectionID >::const_iterator it = connectome.begin();
         it != connectome.end();
         ++it )
@@ -355,6 +372,8 @@ lfp_detector::calibrate()
   }
   const TokenArray source_a = TokenArray( n_sources );
   connectome.clear();
+
+  // All connections to the sources found above
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
         ++syn_id )
@@ -363,6 +382,10 @@ lfp_detector::calibrate()
       connectome, &source_a, target_a, syn_id, synapse_label );
   }
 
+  long source_pop = 0;
+  long target_pop = 0;
+  long index = 0;
+
   // Convert connectome deque to map for efficient lookup.
   for ( std::deque< ConnectionID >::const_iterator con = connectome.begin();
         con != connectome.end();
@@ -370,6 +393,7 @@ lfp_detector::calibrate()
   {
     Node* target_node = kernel().node_manager.get_node(
       con->get_target_gid(), con->get_target_thread() );
+
     // Skip if target is a device or this model.
     if ( not target_node->has_proxies()
       or target_node->get_model_id() == this->get_model_id() )
@@ -385,9 +409,16 @@ lfp_detector::calibrate()
     }
     else
     {
+      // {source1: [tgid1 tgid2 tgid3 ...], ....}
       B_.connectome_map[ con->get_source_gid() ].push_back(
         con->get_target_gid() );
     }
+
+    // We find number of connections for each projection
+    source_pop = get_pop_of_gid( con->get_source_gid() );
+    target_pop = get_pop_of_gid( con->get_target_gid() );
+    index = source_pop * V_.num_populations_ + target_pop;
+    V_.connection_normalizer_[index] += 1;
   }
 }
 
@@ -422,18 +453,27 @@ lfp_detector::update( Time const& origin, const long from, const long to )
           * S_.y2_[ State_::G
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
+      double sp = B_.spikes_[ i ].get_value( lag );
+      double spike_normalizer = 1;
+      if ( P_.n_receptors() != 1 )
+      {
+        spike_normalizer = sp / V_.connection_normalizer_[ i ];
+      }
+
       // Contribution from first exponential
       S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                             * i ) ] *= V_.P11_syn_[ i ];
+
       S_.y_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value_wfr_update( lag );
+        V_.normalizer_[ i ] * sp * spike_normalizer;
+
       // Contribution from second exponential
       S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                              * i ) ] *= V_.P11_syn2_[ i ];
       S_.y2_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer2_[ i ] * B_.spikes_[ i ].get_value( lag );
+        V_.normalizer2_[ i ] * sp * spike_normalizer;
     }
 
     // log state data
@@ -527,9 +567,6 @@ lfp_detector::get_pop_of_gid( const index& gid ) const
       && gid <= ( u_long ) P_.borders[ i + 1 ] )
     {
       const double tmp_pop = i / 2;
-      // TODO: remove assertion when model works.
-      assert(
-        tmp_pop == std::floor( tmp_pop ) ); // Population must be an integer.
       pop = tmp_pop;
       break; // A neuron can be in only one population.
     }
