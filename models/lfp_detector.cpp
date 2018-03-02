@@ -141,11 +141,17 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     }
     for ( size_t i = 0; i < tau_rise.size(); ++i )
     {
-      if ( tau_rise[ i ] <= 0 or tau_decay[ i ] <= 0 or tau_rise2[ i ] <= 0
-        or tau_decay2[ i ] <= 0 )
+      if ( tau_rise[ i ] == 0 or tau_decay[ i ] == 0 or tau_rise2[ i ] == 0
+        or tau_decay2[ i ] == 0 )
+      {
+        throw BadProperty( "Tau constants cannot be zero." );
+      }
+      if ( tau_rise[ i ] == tau_decay[ i ]
+        or tau_rise2[ i ] == tau_decay2[ i ] )
       {
         throw BadProperty(
-          "All synaptic time constants must be strictly positive" );
+          "The i-th element in tau_rise/tau_rise2 cannot be equal to the i-th "
+          "element in tau_decay/tau_decay2." );
       }
     }
   }
