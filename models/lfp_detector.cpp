@@ -436,7 +436,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
   {
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
-      // Contribution from first exponential
+      // Contribution from first beta
       S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                            * i ) ] = V_.P21_syn_[ i ]
           * S_.y_[ State_::DG
@@ -444,7 +444,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
         + V_.P22_syn_[ i ]
           * S_.y_[ State_::G
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
-      // Contribution from second exponential
+      // Contribution from second beta
       S_.y2_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                             * i ) ] = V_.P21_syn2_[ i ]
           * S_.y2_[ State_::DG
@@ -460,7 +460,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
         spike_normalizer = sp / V_.connection_normalizer_[ i ];
       }
 
-      // Contribution from first exponential
+      // Contribution from first beta
       S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                             * i ) ] *= V_.P11_syn_[ i ];
 
@@ -468,7 +468,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
         V_.normalizer_[ i ] * sp * spike_normalizer;
 
-      // Contribution from second exponential
+      // Contribution from second beta
       S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                              * i ) ] *= V_.P11_syn2_[ i ];
       S_.y2_[ State_::DG
