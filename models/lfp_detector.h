@@ -220,7 +220,6 @@ private:
   {
     std::vector< double > normalizer_;
     std::vector< double > normalizer2_;
-    std::vector< double > connection_normalizer_;
 
     std::vector< double > P11_syn_;
     std::vector< double > P21_syn_;

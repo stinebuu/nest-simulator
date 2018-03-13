@@ -302,7 +302,6 @@ lfp_detector::calibrate()
   // normalizers will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
   V_.normalizer2_.resize( P_.n_receptors() );
-  V_.connection_normalizer_.resize( P_.n_receptors() );
 
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
@@ -330,10 +329,6 @@ lfp_detector::calibrate()
 
     V_.normalizer_[ i ] = P_.normalizer[ i ];
     V_.normalizer2_[ i ] = P_.normalizer2[ i ];
-
-    // Need to initialize the connection_normalizer_ with one and then find the
-    // number of connections below
-    V_.connection_normalizer_[ i ] = 1;
 
     B_.spikes_[ i ].resize();
   }
@@ -382,10 +377,6 @@ lfp_detector::calibrate()
       connectome, &source_a, target_a, syn_id, synapse_label );
   }
 
-  long source_pop = 0;
-  long target_pop = 0;
-  long index = 0;
-
   // Convert connectome deque to map for efficient lookup.
   for ( std::deque< ConnectionID >::const_iterator con = connectome.begin();
         con != connectome.end();
@@ -413,12 +404,6 @@ lfp_detector::calibrate()
       B_.connectome_map[ con->get_source_gid() ].push_back(
         con->get_target_gid() );
     }
-
-    // We find number of connections for each projection
-    source_pop = get_pop_of_gid( con->get_source_gid() );
-    target_pop = get_pop_of_gid( con->get_target_gid() );
-    index = source_pop * V_.num_populations_ + target_pop;
-    V_.connection_normalizer_[index] += 1;
   }
 }
 
@@ -437,43 +422,38 @@ lfp_detector::update( Time const& origin, const long from, const long to )
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
       // Contribution from first beta
-      S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                           * i ) ] = V_.P21_syn_[ i ]
-          * S_.y_[ State_::DG
-              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn_[ i ]
-          * S_.y_[ State_::G
-              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
-      // Contribution from second beta
-      S_.y2_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                            * i ) ] = V_.P21_syn2_[ i ]
-          * S_.y2_[ State_::DG
-              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn2_[ i ]
-          * S_.y2_[ State_::G
-              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      S_.y_[ State_::G +
+        ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] =
+        V_.P21_syn_[ i ] * S_.y_[
+          State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn_[ i ] * S_.y_[
+          State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
-      double sp = B_.spikes_[ i ].get_value( lag );
-      double spike_normalizer = 1;
-      if ( P_.n_receptors() != 1 )
-      {
-        spike_normalizer = sp / V_.connection_normalizer_[ i ];
-      }
+      // Contribution from second beta
+      S_.y2_[ State_::G
+        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] =
+        V_.P21_syn2_[ i ] * S_.y2_[
+          State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn2_[ i ] * S_.y2_[
+          State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
       // Contribution from first beta
-      S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                            * i ) ] *= V_.P11_syn_[ i ];
+      S_.y_[ State_::DG
+        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] *=
+        V_.P11_syn_[ i ];
 
       S_.y_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer_[ i ] * sp * spike_normalizer;
+        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value_wfr_update( lag );
 
       // Contribution from second beta
-      S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                             * i ) ] *= V_.P11_syn2_[ i ];
+      S_.y2_[ State_::DG
+        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] *=
+        V_.P11_syn2_[ i ];
+
       S_.y2_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer2_[ i ] * sp * spike_normalizer;
+        V_.normalizer2_[ i ] * B_.spikes_[ i ].get_value( lag );
     }
 
     // log state data
@@ -537,7 +517,7 @@ lfp_detector::handle( SpikeEvent& e )
         B_.spikes_[ spike_index ].add_value(
           e.get_rel_delivery_steps(
             kernel().simulation_manager.get_slice_origin() ),
-          e.get_weight() * e.get_multiplicity() );
+          e.get_weight() * e.get_multiplicity() / B_.connectome_map[ gid ].size() );
       }
     }
   }
