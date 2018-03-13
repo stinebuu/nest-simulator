@@ -323,7 +323,7 @@ lfp_detector::calibrate()
     V_.P11_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
     V_.P22_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
     V_.P21_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] )
-                         / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
+                     / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_[ i ] - V_.P22_[ i ] );
 
     if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
@@ -331,7 +331,7 @@ lfp_detector::calibrate()
       V_.P11_2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
       V_.P22_2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
       V_.P21_2_[ i ] = ( ( P_.tau_decay2[ i ] * P_.tau_rise2[ i ] )
-                            / ( P_.tau_decay2[ i ] - P_.tau_rise2[ i ] ) )
+                         / ( P_.tau_decay2[ i ] - P_.tau_rise2[ i ] ) )
         * ( V_.P11_2_[ i ] - V_.P22_2_[ i ] );
     }
     else
