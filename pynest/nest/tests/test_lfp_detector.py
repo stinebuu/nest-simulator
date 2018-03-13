@@ -40,7 +40,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         """Test that we record lfp after a spike"""
 
         lfp = nest.Create('lfp_detector', 1,
-                          {'tau_rise': [1 / 0.48886579219795934],
+                          {'tau_rise': [1. / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
         s_generator = nest.Create('spike_generator', 1, {'spike_times': [10.]})
@@ -64,7 +64,7 @@ class LFPDetectorTestCase(unittest.TestCase):
 
         # First create several lfp_detectors, spike_generators and multimeters:
         lfp1 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         s_generator1 = nest.Create('spike_generator', 1,
@@ -72,7 +72,7 @@ class LFPDetectorTestCase(unittest.TestCase):
                                                     35., 40., 45., 50., 55.]})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp2 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         s_generator2 = nest.Create('spike_generator', 1,
@@ -80,7 +80,7 @@ class LFPDetectorTestCase(unittest.TestCase):
                                                     37., 42., 47., 52., 57.]})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp3 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         s_generator3 = nest.Create('spike_generator', 1,
@@ -119,7 +119,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         nest.ResetKernel()
 
         lfp = nest.Create('lfp_detector', 1,
-                          {'tau_rise': [1 / 0.48886579219795934],
+                          {'tau_rise': [1. / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
@@ -154,7 +154,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         nest.ResetKernel()
 
         lfp = nest.Create('lfp_detector', 1,
-                          {'tau_rise': [1 / 0.48886579219795934],
+                          {'tau_rise': [1. / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
@@ -188,19 +188,19 @@ class LFPDetectorTestCase(unittest.TestCase):
 
         # Create:
         lfp1 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         p_generator1 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi1 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp2 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         p_generator2 = nest.Create('poisson_generator', 1, {'rate': 800.})
         multi2 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
         lfp3 = nest.Create('lfp_detector', 1,
-                           {'tau_rise': [1 / 0.48886579219795934],
+                           {'tau_rise': [1. / 0.48886579219795934],
                             'tau_decay': [1. / 0.48856915462005396],
                             'normalizer': [0.00015807504272622632]})
         p_generator3 = nest.Create('poisson_generator', 1, {'rate': 800.})
@@ -233,7 +233,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         nest.ResetKernel()
 
         lfp = nest.Create('lfp_detector', 1,
-                          {'tau_rise': [1 / 0.48886579219795934],
+                          {'tau_rise': [1. / 0.48886579219795934],
                            'tau_decay': [1. / 0.48856915462005396],
                            'normalizer': [0.00015807504272622632]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
@@ -280,8 +280,8 @@ class LFPDetectorTestCase(unittest.TestCase):
                   7.46330397e-12, 4.58550766e-12]
 
         # Create, Connect, Simulate
-        tau_rise = [1 / 0.4137949562815958]
-        tau_decay = [1 / 0.9631522808240071]
+        tau_rise = [1. / 0.4137949562815958]
+        tau_decay = [1. / 0.9631522808240071]
         normalizer = [2.6512177702898558e-08]
 
         lfp = nest.Create('lfp_detector', 1, {'tau_rise': tau_rise,
@@ -307,7 +307,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         spike_times = nest.GetStatus(spikes)[0]['events']['times']
         rate = [0] * int(simtime-1)
         for t in spike_times:
-            t_rounded = math.floor(t)
+            t_rounded = int(math.floor(t))
             rate[t_rounded-1] += 1
 
         # Convolve kernel with the spiking rate to get realistic values
@@ -323,24 +323,24 @@ class LFPDetectorTestCase(unittest.TestCase):
         """LFP is sum invariant"""
         N = 3  # Number of neurons
         T = 100.  # Simulation time
-        tau_rise = [1 / a for a in [0.48886579219795934,
-                                    0.9035914068978077,
-                                    0.1930894552692974,
-                                    0.9093497442449103,
-                                    0.41639118548249265,
-                                    0.9034399617801607,
-                                    0.2617577871858636,
-                                    0.9059096122950062,
-                                    0.710567063977332]]
-        tau_decay = [1 / b for b in [0.48856915462005396,
-                                     1.3469868506112692,
-                                     0.32806051756797333,
-                                     1.3498529711342273,
-                                     0.41132039426568,
-                                     1.3468658588833944,
-                                     0.26070589459724114,
-                                     1.3481709833572588,
-                                     0.7107727064429461]]
+        tau_rise = [1. / a for a in [0.48886579219795934,
+                                     0.9035914068978077,
+                                     0.1930894552692974,
+                                     0.9093497442449103,
+                                     0.41639118548249265,
+                                     0.9034399617801607,
+                                     0.2617577871858636,
+                                     0.9059096122950062,
+                                     0.710567063977332]]
+        tau_decay = [1. / b for b in [0.48856915462005396,
+                                      1.3469868506112692,
+                                      0.32806051756797333,
+                                      1.3498529711342273,
+                                      0.41132039426568,
+                                      1.3468658588833944,
+                                      0.26070589459724114,
+                                      1.3481709833572588,
+                                      0.7107727064429461]]
 
         normalizer = [0.00015807504272622632,
                       1.1871740309906909e-05,
