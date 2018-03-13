@@ -226,12 +226,12 @@ private:
     std::vector< double > normalizer_;
     std::vector< double > normalizer2_;
 
-    std::vector< double > P11_syn_;
-    std::vector< double > P21_syn_;
-    std::vector< double > P22_syn_;
-    std::vector< double > P11_syn2_;
-    std::vector< double > P21_syn2_;
-    std::vector< double > P22_syn2_;
+    std::vector< double > P11_;
+    std::vector< double > P21_;
+    std::vector< double > P22_;
+    std::vector< double > P11_2_;
+    std::vector< double > P21_2_;
+    std::vector< double > P22_2_;
 
     int num_populations_;
   };

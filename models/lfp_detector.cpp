@@ -299,12 +299,12 @@ lfp_detector::calibrate()
 
   V_.num_populations_ = std::sqrt( P_.n_receptors() );
 
-  V_.P11_syn_.resize( P_.n_receptors() );
-  V_.P21_syn_.resize( P_.n_receptors() );
-  V_.P22_syn_.resize( P_.n_receptors() );
-  V_.P11_syn2_.resize( P_.n_receptors() );
-  V_.P21_syn2_.resize( P_.n_receptors() );
-  V_.P22_syn2_.resize( P_.n_receptors() );
+  V_.P11_.resize( P_.n_receptors() );
+  V_.P21_.resize( P_.n_receptors() );
+  V_.P22_.resize( P_.n_receptors() );
+  V_.P11_2_.resize( P_.n_receptors() );
+  V_.P21_2_.resize( P_.n_receptors() );
+  V_.P22_2_.resize( P_.n_receptors() );
 
   S_.y_.resize(
     State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
@@ -320,25 +320,25 @@ lfp_detector::calibrate()
   for ( size_t i = 0; i < P_.n_receptors(); i++ )
   {
     // Set matrix components
-    V_.P11_syn_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
-    V_.P22_syn_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
-    V_.P21_syn_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] )
+    V_.P11_[ i ] = std::exp( -h / P_.tau_decay[ i ] );
+    V_.P22_[ i ] = std::exp( -h / P_.tau_rise[ i ] );
+    V_.P21_[ i ] = ( ( P_.tau_decay[ i ] * P_.tau_rise[ i ] )
                          / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
-      * ( V_.P11_syn_[ i ] - V_.P22_syn_[ i ] );
+      * ( V_.P11_[ i ] - V_.P22_[ i ] );
 
     if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
     {
-      V_.P11_syn2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
-      V_.P22_syn2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
-      V_.P21_syn2_[ i ] = ( ( P_.tau_decay2[ i ] * P_.tau_rise2[ i ] )
+      V_.P11_2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
+      V_.P22_2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
+      V_.P21_2_[ i ] = ( ( P_.tau_decay2[ i ] * P_.tau_rise2[ i ] )
                             / ( P_.tau_decay2[ i ] - P_.tau_rise2[ i ] ) )
-        * ( V_.P11_syn2_[ i ] - V_.P22_syn2_[ i ] );
+        * ( V_.P11_2_[ i ] - V_.P22_2_[ i ] );
     }
     else
     {
-      V_.P11_syn2_[ i ] = 0;
-      V_.P22_syn2_[ i ] = 0;
-      V_.P21_syn2_[ i ] = 0;
+      V_.P11_2_[ i ] = 0;
+      V_.P22_2_[ i ] = 0;
+      V_.P21_2_[ i ] = 0;
     }
 
     V_.normalizer_[ i ] = P_.normalizer[ i ];
@@ -355,6 +355,7 @@ lfp_detector::calibrate()
   std::vector< size_t > self_target;
   const TokenArray* self_source_a = 0;
   long synapse_label = UNLABELED_CONNECTION;
+
   // The gid of the lfp_detector
   self_target.push_back( this->get_gid() );
   const TokenArray self_target_a = TokenArray( self_target );
@@ -437,25 +438,25 @@ lfp_detector::update( Time const& origin, const long from, const long to )
     {
       // Contribution from first beta
       S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                           * i ) ] = V_.P21_syn_[ i ]
+                           * i ) ] = V_.P21_[ i ]
           * S_.y_[ State_::DG
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn_[ i ]
+        + V_.P22_[ i ]
           * S_.y_[ State_::G
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
       // Contribution from second beta
       S_.y2_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                            * i ) ] = V_.P21_syn2_[ i ]
+                            * i ) ] = V_.P21_2_[ i ]
           * S_.y2_[ State_::DG
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn2_[ i ]
+        + V_.P22_2_[ i ]
           * S_.y2_[ State_::G
               + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
       // Contribution from first beta
       S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                            * i ) ] *= V_.P11_syn_[ i ];
+                            * i ) ] *= V_.P11_[ i ];
 
       S_.y_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
@@ -463,7 +464,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
 
       // Contribution from second beta
       S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
-                             * i ) ] *= V_.P11_syn2_[ i ];
+                             * i ) ] *= V_.P11_2_[ i ];
 
       S_.y2_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
