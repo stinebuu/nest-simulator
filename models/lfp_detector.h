@@ -112,6 +112,9 @@ private:
   void calibrate();
   void update( Time const&, const long, const long );
 
+  /**
+   * Get the population of the gid.
+   */
   long get_pop_of_gid( const index& ) const;
 
   // The next two classes need to be friends to access the State_ class/member
@@ -125,21 +128,24 @@ private:
    */
   struct Parameters_
   {
-    std::vector< double > tau_rise;   //!< Rise time of synaptic conductance
-                                      //!< in ms for the first exponential.
-    std::vector< double > tau_decay;  //!< Decay time of synaptic conductance
-                                      //!< in ms for the first exponential.
-    std::vector< double > tau_rise2;  //!< Rise time of synaptic conductance
-                                      //!< in ms for the second exponential.
-    std::vector< double > tau_decay2; //!< Decay time of synaptic conductance
-                                      //!< in ms for the second exponential.
+    std::vector< double > tau_rise;   //!< Rise time in ms for
+                                      //!< the first beta function.
+    std::vector< double > tau_decay;  //!< Decay time in ms for
+                                      //!< the first beta function.
+    std::vector< double > tau_rise2;  //!< Rise time in ms for
+                                      //!< the second beta function.
+    std::vector< double > tau_decay2; //!< Decay time in ms for
+                                      //!< the second beta function.
 
-    std::vector< double >
-      normalizer; //!< Normalizing factor for the first exponential.
-    std::vector< double >
-      normalizer2; //!< Normalizing factor for the second exponential.
+    //!< Normalizing factor for the first and second beta functions.
+    std::vector< double > normalizer;
+    std::vector< double > normalizer2;
 
-    std::vector< long > borders; //! Population borders
+    //! Population borders, first and second GIDs of populations connected to
+    //! the lfp_detector. Set up like
+    //!   [first_gid_pop_1, last_gid_pop_1, first_gid_pop_2, last_gid_pop_2,
+    //!    ... , first_gid_pop_n, last_gid_pop_n]
+    std::vector< long > borders;
 
     Parameters_(); //!< Sets default parameter values
 
@@ -168,9 +174,8 @@ private:
      * Enumeration identifying elements in state vector State_::y_.
      * This enum identifies the elements of the vector. It must be public to be
      * accessible from the iteration function. The last two elements of this
-     * enum (DG, G) will be repeated
-     * n times at the end of the state vector State_::y with n being the number
-     * of synapses.
+     * enum (DG, G) will be repeated n times at the end of the state vector
+     * State_::y with n being the number of projections.
      */
     enum StateVecElems
     {
@@ -181,8 +186,8 @@ private:
 
     static const size_t NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR = 2; // DG, G
 
-    std::vector< double > y_;  //!< neuron state
-    std::vector< double > y2_; //!< second neuron state
+    std::vector< double > y_;  //!< neuron state for first beta function
+    std::vector< double > y2_; //!< neuron state for second beta function
 
     State_( const Parameters_& ); //!< Default initialization
     State_( const State_& );
@@ -228,8 +233,6 @@ private:
     std::vector< double > P21_syn2_;
     std::vector< double > P22_syn2_;
 
-    unsigned int receptor_types_size_;
-
     int num_populations_;
   };
 
@@ -244,8 +247,10 @@ private:
     double tot_lfp = 0;
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
+      // lfp from first beta function
       tot_lfp +=
         S_.y_[ elem + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      // lfp from second beta function
       tot_lfp +=
         S_.y2_[ elem + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
     }
@@ -255,7 +260,7 @@ private:
   // Data members -----------------------------------------------------------
 
   /**
-   * @defgroup aeif_cond_beta_multisynapse
+   * @defgroup lfp_detector
    * Instances of private data structures for the different types
    * of data pertaining to the model.
    * @note The order of definitions is important for speed.

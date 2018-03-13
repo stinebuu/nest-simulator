@@ -186,7 +186,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     {
       throw BadProperty(
         "Number of borders does not correspond with number of tau "
-        "coefficients. Must be two borders per population." );
+        "coefficients. Must be two border values per population." );
     }
   }
 }
@@ -484,6 +484,8 @@ lfp_detector::handle( SpikeEvent& e )
   // TODO: Should probably only allow with borders eventually.
   if ( P_.borders.size() > 0 )
   {
+    // Place spike correctly in spike buffer. Must be placed according to which
+    // projection it belongs to.
     index gid = e.get_sender_gid();
     source_pop = get_pop_of_gid( gid );
     if ( source_pop == -1 )
@@ -493,6 +495,8 @@ lfp_detector::handle( SpikeEvent& e )
       throw KernelException( "Detected spike from undefined population, gid = "
         + string_stream.str() );
     }
+    // Go through all connected targets of the GID and place the spike in the
+    // spike buffer according to the population of source and target.
     std::vector< long >* targets = &B_.connectome_map[ gid ];
     for ( std::vector< long >::const_iterator vec_it = targets->begin();
           vec_it != targets->end();
@@ -514,6 +518,10 @@ lfp_detector::handle( SpikeEvent& e )
         assert( ( spike_index >= 0 )
           && ( ( size_t ) spike_index <= P_.n_receptors() ) );
 
+        // Add the spike to the spike buffer.
+        // Must divide by the GIDs connectome_map size, because we place the
+        // spike in the spike buffer the same number of times as the size of
+        // the target vector to the GID.
         B_.spikes_[ spike_index ].add_value(
           e.get_rel_delivery_steps(
             kernel().simulation_manager.get_slice_origin() ),
@@ -523,6 +531,8 @@ lfp_detector::handle( SpikeEvent& e )
   }
   else
   {
+    // If we do not have a border, we just place the spike first in the spike
+    // buffer.
     B_.spikes_[ 0 ].add_value(
       e.get_rel_delivery_steps(
         kernel().simulation_manager.get_slice_origin() ),
