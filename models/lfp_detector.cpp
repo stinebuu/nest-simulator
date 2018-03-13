@@ -54,12 +54,12 @@ RecordablesMap< lfp_detector >::create()
  * ---------------------------------------------------------------- */
 
 lfp_detector::Parameters_::Parameters_()
-  : tau_rise( 1, 2.0468 )         // ms
-  , tau_decay( 1, 2.0456 )        // ms
-  , tau_rise2( 1, 2.0468 )        // ms
-  , tau_decay2( 1, 2.0456 )       // ms
-  , normalizer( 1, 1.58075e-04 )  // mV / ms
-  , normalizer2( 1, 0 ) // mV / ms
+  : tau_rise( 1, 2.0468 )        // ms
+  , tau_decay( 1, 2.0456 )       // ms
+  , tau_rise2( 1, 2.0468 )       // ms
+  , tau_decay2( 1, 2.0456 )      // ms
+  , normalizer( 1, 1.58075e-04 ) // mV / ms
+  , normalizer2( 1, 0 )          // mV / ms
 {
 }
 
@@ -127,9 +127,8 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     throw BadProperty( "Tau coefficient arrays must have the same length." );
   }
 
-  if( tau_rise2.size() != 1 and
-      ( tau_rise.size() != tau_rise2.size() or
-        tau_rise.size() != tau_decay2.size() ) )
+  if ( tau_rise2.size() != 1 and ( tau_rise.size() != tau_rise2.size()
+                                   or tau_rise.size() != tau_decay2.size() ) )
   {
     throw BadProperty( "Tau coefficient arrays must have the same length." );
   }
@@ -148,11 +147,26 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
     }
     for ( size_t i = 0; i < tau_rise.size(); ++i )
     {
-      if ( tau_rise[ i ] <= 0 or tau_decay[ i ] <= 0 or tau_rise2[ i ] <= 0
-        or tau_decay2[ i ] <= 0 )
+      if ( tau_rise[ i ] == 0 or tau_decay[ i ] == 0 )
+      {
+        throw BadProperty( "Tau constants cannot be zero." );
+      }
+      if ( tau_rise[ i ] == tau_decay[ i ] )
       {
         throw BadProperty(
-          "All synaptic time constants must be strictly positive" );
+          "The i-th element in tau_rise/tau_rise2 cannot be equal to the i-th "
+          "element in tau_decay/tau_decay2." );
+      }
+      if ( tau_rise2.size() != 1
+        and ( tau_rise2[ i ] == 0 or tau_decay2[ i ] == 0 ) )
+      {
+        throw BadProperty( "Tau constants cannot be zero." );
+      }
+      if ( tau_rise2.size() != 1 and tau_rise2[ i ] == tau_decay2[ i ] )
+      {
+        throw BadProperty(
+          "The i-th element in tau_rise/tau_rise2 cannot be equal to the i-th "
+          "element in tau_decay/tau_decay2." );
       }
     }
   }
@@ -422,34 +436,34 @@ lfp_detector::update( Time const& origin, const long from, const long to )
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
       // Contribution from first beta
-      S_.y_[ State_::G +
-        ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] =
-        V_.P21_syn_[ i ] * S_.y_[
-          State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn_[ i ] * S_.y_[
-          State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                           * i ) ] = V_.P21_syn_[ i ]
+          * S_.y_[ State_::DG
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn_[ i ]
+          * S_.y_[ State_::G
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
       // Contribution from second beta
-      S_.y2_[ State_::G
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] =
-        V_.P21_syn2_[ i ] * S_.y2_[
-          State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
-        + V_.P22_syn2_[ i ] * S_.y2_[
-          State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
+      S_.y2_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                            * i ) ] = V_.P21_syn2_[ i ]
+          * S_.y2_[ State_::DG
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ]
+        + V_.P22_syn2_[ i ]
+          * S_.y2_[ State_::G
+              + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ];
 
       // Contribution from first beta
-      S_.y_[ State_::DG
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] *=
-        V_.P11_syn_[ i ];
+      S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                            * i ) ] *= V_.P11_syn_[ i ];
 
       S_.y_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
         V_.normalizer_[ i ] * B_.spikes_[ i ].get_value_wfr_update( lag );
 
       // Contribution from second beta
-      S_.y2_[ State_::DG
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] *=
-        V_.P11_syn2_[ i ];
+      S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                             * i ) ] *= V_.P11_syn2_[ i ];
 
       S_.y2_[ State_::DG
         + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
@@ -525,7 +539,8 @@ lfp_detector::handle( SpikeEvent& e )
         B_.spikes_[ spike_index ].add_value(
           e.get_rel_delivery_steps(
             kernel().simulation_manager.get_slice_origin() ),
-          e.get_weight() * e.get_multiplicity() / B_.connectome_map[ gid ].size() );
+          e.get_weight() * e.get_multiplicity()
+            / B_.connectome_map[ gid ].size() );
       }
     }
   }
