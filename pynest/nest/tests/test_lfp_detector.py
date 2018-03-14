@@ -46,8 +46,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         s_generator = nest.Create('spike_generator', 1, {'spike_times': [10.]})
         multi = nest.Create('multimeter', 1, {'record_from': ['lfp']})
 
-        nest.Connect(s_generator, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator, lfp)
         nest.Connect(multi, lfp)
 
         nest.Simulate(35.)
@@ -89,14 +88,11 @@ class LFPDetectorTestCase(unittest.TestCase):
         multi3 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
 
         # Connect:
-        nest.Connect(s_generator1, lfp1, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator1, lfp1)
         nest.Connect(multi1, lfp1)
-        nest.Connect(s_generator2, lfp2, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator2, lfp2)
         nest.Connect(multi2, lfp2)
-        nest.Connect(s_generator3, lfp3, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator3, lfp3)
         nest.Connect(multi3, lfp3)
 
         # Simulate:
@@ -133,12 +129,9 @@ class LFPDetectorTestCase(unittest.TestCase):
                                    {'spike_times': [14., 19., 24., 29., 34.,
                                                     39., 44., 49., 54., 59.]})
 
-        nest.Connect(s_generator1, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
-        nest.Connect(s_generator2, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
-        nest.Connect(s_generator3, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator1, lfp)
+        nest.Connect(s_generator2, lfp)
+        nest.Connect(s_generator3, lfp)
         nest.Connect(multi, lfp)
 
         nest.Simulate(200.)
@@ -166,8 +159,7 @@ class LFPDetectorTestCase(unittest.TestCase):
                                                    44., 45., 47., 49., 50.,
                                                    52., 54., 55., 57., 59.]})
 
-        nest.Connect(s_generator, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(s_generator, lfp)
         nest.Connect(multi, lfp)
 
         nest.Simulate(200.)
@@ -207,14 +199,11 @@ class LFPDetectorTestCase(unittest.TestCase):
         multi3 = nest.Create('multimeter', 1, {'record_from': ['lfp']})
 
         # Connect
-        nest.Connect(p_generator1, lfp1, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(p_generator1, lfp1)
         nest.Connect(multi1, lfp1)
-        nest.Connect(p_generator2, lfp2, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(p_generator2, lfp2)
         nest.Connect(multi2, lfp2)
-        nest.Connect(p_generator3, lfp3, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(p_generator3, lfp3)
         nest.Connect(multi3, lfp3)
 
         # Simulate
@@ -241,12 +230,9 @@ class LFPDetectorTestCase(unittest.TestCase):
         p_generator2 = nest.Create('poisson_generator', 1, {'rate': 800.})
         p_generator3 = nest.Create('poisson_generator', 1, {'rate': 800.})
 
-        nest.Connect(p_generator1, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
-        nest.Connect(p_generator2, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
-        nest.Connect(p_generator3, lfp, 'one_to_one',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(p_generator1, lfp)
+        nest.Connect(p_generator2, lfp)
+        nest.Connect(p_generator3, lfp)
         nest.Connect(multi, lfp)
 
         nest.Simulate(200.)
@@ -256,7 +242,7 @@ class LFPDetectorTestCase(unittest.TestCase):
             self.assertAlmostEqual(collected_lfp[count],
                                    gs[0]['events']['lfp'][count])
 
-    def test_kernel_convolution(self):
+    def testKernelConvolution(self):
         """Test lfp with realistic data"""
 
         # To test that the lfp we get from nestkernel is realistic, we test it
@@ -293,8 +279,7 @@ class LFPDetectorTestCase(unittest.TestCase):
         p_generator = nest.Create('poisson_generator', 1, {'rate': 400.})
 
         nest.Connect(p_generator, parrot)
-        nest.Connect(parrot, lfp, 'all_to_all',
-                     {'model': 'static_synapse', 'receptor_type': 1})
+        nest.Connect(parrot, lfp)
         nest.Connect(multi, lfp)
         nest.Connect(parrot, spikes)
 
@@ -367,8 +352,7 @@ class LFPDetectorTestCase(unittest.TestCase):
 
         for i in range(N):
             nest.Connect(pg, neurons[i])
-            nest.Connect(neurons[i], lfp[i], 'one_to_one',
-                         {'model': 'static_synapse', 'receptor_type': 1})
+            nest.Connect(neurons[i], lfp[i])
             nest.Connect(mm[i], lfp[i])
             for j in range(N):
                 nest.Connect(neurons[i], neurons[j])
@@ -398,8 +382,7 @@ class LFPDetectorTestCase(unittest.TestCase):
 
         for i in range(N):
             nest.Connect(pg, neurons[i])
-            nest.Connect(neurons[i], lfp, 'one_to_one',
-                         {'model': 'static_synapse', 'receptor_type': 1})
+            nest.Connect(neurons[i], lfp)
             for j in range(N):
                 nest.Connect(neurons[i], neurons[j])
         nest.Connect(mm, lfp)
@@ -413,6 +396,14 @@ class LFPDetectorTestCase(unittest.TestCase):
         # LFP values should be (almost) equal
         np.testing.assert_array_almost_equal(sum_of_recorded_lfp,
                                              recorded_lfp_sum)
+
+    def test_IllegalConnection(self):
+        """Test that lfp_detector as source is illegal"""
+        lfp = nest.Create('lfp_detector')
+        nrn = nest.Create('iaf_psc_alpha')
+
+        with self.assertRaises(nest.NESTError):
+            nest.Connect(lfp, nrn)
 
 
 def suite():

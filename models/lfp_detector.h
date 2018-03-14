@@ -95,8 +95,6 @@ public:
   using Node::handle;
   using Node::handles_test_event;
 
-  port send_test_event( Node&, rport, synindex, bool );
-
   void handle( SpikeEvent& );
   void handle( DataLoggingRequest& );
 
@@ -275,18 +273,6 @@ private:
   //! Mapping of recordables names to access functions
   static RecordablesMap< lfp_detector > recordablesMap_;
 };
-
-inline port
-lfp_detector::send_test_event( Node& target,
-  rport receptor_type,
-  synindex,
-  bool )
-{
-  SpikeEvent e;
-  e.set_sender( *this );
-
-  return target.handles_test_event( e, receptor_type );
-}
 
 inline port
 lfp_detector::handles_test_event( DataLoggingRequest& dlr, rport receptor_type )
