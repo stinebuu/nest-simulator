@@ -480,7 +480,7 @@ lfp_detector::update( Time const& origin, const long from, const long to )
 port
 lfp_detector::handles_test_event( SpikeEvent&, rport receptor_type )
 {
-  if ( receptor_type <= 0
+  if ( receptor_type < 0
     || receptor_type > static_cast< port >( P_.n_receptors() ) )
   {
     throw IncompatibleReceptorType( receptor_type, get_name(), "SpikeEvent" );
