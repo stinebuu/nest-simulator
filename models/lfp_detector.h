@@ -31,6 +31,8 @@
 #include "ring_buffer.h"
 #include "universal_data_logger.h"
 
+#include <set>
+
 
 /* BeginDocumentation
  Name: lfp_detector - Device for calculating LFP signal.
@@ -75,7 +77,7 @@ namespace nest
  *
  * It receives spikes via its handle(SpikeEvent&) method, and buffers them
  * according to target population. The LFP is calculated by convoluting the
- * spikes and a beta function in the update() method, and is then stored via
+ * spikes and a beta function in the update() function, and is then stored via
  * its RecordingDevice in the same method.
  */
 
@@ -211,7 +213,7 @@ private:
 
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
-    std::map< long, std::vector< long > > connectome_map;
+    std::vector< std::set< index > > proj_vec_;
   };
 
   // ----------------------------------------------------------------

@@ -312,6 +312,7 @@ lfp_detector::calibrate()
     State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
 
   B_.spikes_.resize( P_.n_receptors() );
+  B_.proj_vec_.resize( P_.n_receptors() );
 
   // normalizers will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
@@ -326,7 +327,8 @@ lfp_detector::calibrate()
                      / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_[ i ] - V_.P22_[ i ] );
 
-    if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
+    //if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
+    if ( P_.normalizer2[ i ] != 0 )
     {
       V_.P11_2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
       V_.P22_2_[ i ] = std::exp( -h / P_.tau_rise2[ i ] );
@@ -345,6 +347,8 @@ lfp_detector::calibrate()
     V_.normalizer2_[ i ] = P_.normalizer2[ i ];
 
     B_.spikes_[ i ].resize();
+    std::set< index > tmp_set;
+    B_.proj_vec_[ i ] = tmp_set;
   }
 
   // Get GIDs of nodes connected to the LFP recorder.
@@ -383,6 +387,9 @@ lfp_detector::calibrate()
   const TokenArray source_a = TokenArray( n_sources );
   connectome.clear();
 
+  long source_pop;
+  long target_pop;
+
   // All connections to the sources found above
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
@@ -406,20 +413,29 @@ lfp_detector::calibrate()
     {
       continue;
     }
-    if ( B_.connectome_map.count( con->get_source_gid() ) == 0 )
-    {
-      // If key doesn't exist in the map.
-      std::vector< long > target_vector;
-      target_vector.push_back( con->get_target_gid() );
-      B_.connectome_map[ con->get_source_gid() ] = target_vector;
-    }
-    else
-    {
-      // {source1: [tgid1 tgid2 tgid3 ...], ....}
-      B_.connectome_map[ con->get_source_gid() ].push_back(
-        con->get_target_gid() );
-    }
+
+    source_pop = get_pop_of_gid(con->get_source_gid());
+    target_pop = get_pop_of_gid(con->get_target_gid());
+    index projection_index = source_pop * V_.num_populations_ + target_pop;
+
+    B_.proj_vec_[projection_index].insert(con->get_source_gid());
   }
+
+  std::vector< std::set< index > >::const_iterator proj_it;
+  std::set< index >::const_iterator set_it;
+  long proj = 0;
+
+  for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end(); ++proj_it )
+  {
+    std::cerr << "projection nr.: " << proj << std::endl;
+    for ( set_it = proj_it->begin(); set_it != proj_it->end(); ++set_it)
+    {
+      std::cerr << *set_it << " ";
+    }
+    proj++;
+    std::cerr << "\n";
+  }
+
 }
 
 /* ----------------------------------------------------------------
@@ -493,62 +509,50 @@ lfp_detector::handle( SpikeEvent& e )
 {
   assert( e.get_delay() > 0 );
 
-  long source_pop = 0;
-  long target_pop = 0;
-
   // TODO: Should probably only allow with borders eventually.
   if ( P_.borders.size() > 0 )
   {
     // Place spike correctly in spike buffer. Must be placed according to which
     // projection it belongs to.
     index gid = e.get_sender_gid();
-    source_pop = get_pop_of_gid( gid );
-    if ( source_pop == -1 )
-    {
-      std::stringstream string_stream;
-      string_stream << gid;
-      throw KernelException( "Detected spike from undefined population, gid = "
-        + string_stream.str() );
-    }
-    // Go through all connected targets of the GID and place the spike in the
-    // spike buffer according to the population of source and target.
-    std::vector< long >* targets = &B_.connectome_map[ gid ];
-    for ( std::vector< long >::const_iterator vec_it = targets->begin();
-          vec_it != targets->end();
-          ++vec_it )
-    {
-      target_pop = get_pop_of_gid( *vec_it );
-      if ( target_pop == -1 )
-      {
-        std::stringstream string_stream;
-        string_stream << *vec_it;
-        throw KernelException( "Detected spike to undefined population, gid = "
-          + string_stream.str() );
-      }
-      else
-      {
-        // Map source and target population to an index in the spike vector.
-        long spike_index = source_pop * V_.num_populations_ + target_pop;
 
-        assert( ( spike_index >= 0 )
-          && ( ( size_t ) spike_index <= P_.n_receptors() ) );
+    //std::cerr << "\n" << "source gid: " << gid << std::endl;
+    //std::cerr << "receiver gid " << e.get_receiver_gid() << std::endl;
 
-        // Add the spike to the spike buffer.
-        // Must divide by the GIDs connectome_map size, because we place the
-        // spike in the spike buffer the same number of times as the size of
-        // the target vector to the GID.
-        B_.spikes_[ spike_index ].add_value(
-          e.get_rel_delivery_steps(
-            kernel().simulation_manager.get_slice_origin() ),
-          e.get_weight() * e.get_multiplicity()
-            / B_.connectome_map[ gid ].size() );
+    std::vector< std::set< index > >::const_iterator proj_it;
+    std::set< index >::const_iterator set_it;
+    std::set< index >::const_iterator set_itt;
+    long proj = 0;
+
+    for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end(); ++proj_it )
+    {
+      set_it = proj_it->find( gid );
+      //std::cerr << "\nset it: " << *set_it << " proj: " << proj << " gid: " << gid << std::endl;
+      std::cerr << "\nset size: " << proj_it->size() << std::endl;
+
+      //std::cerr << "projection nr.: " << proj << ", gid nr.: " << gid << ", gid's place in set: " << *set_it << ", set.begin(): " << *(proj_it->begin()) << ", set.end(): " << *(proj_it->end()) << std::endl;
+      for ( set_itt = proj_it->begin(); set_itt != proj_it->end(); ++set_itt)
+      {
+      //  std::cerr << *set_itt << " ";
       }
+      //std::cerr << "\n";
+
+      if ( set_it != proj_it->end() )
+      {
+        long source_pop = get_pop_of_gid( gid );
+        size_t pre_pop_size = P_.borders[source_pop*2 + 1] - P_.borders[source_pop*2] + 1;
+        std::cerr << "pre pop size: " << pre_pop_size << std::endl;
+        //std::cerr << "\ngid: " << gid << " proj: " << proj << std::endl;
+        B_.spikes_[ proj ].add_value(e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin() ), e.get_weight() * e.get_multiplicity() );
+      }
+      proj++;
     }
   }
   else
   {
-    // If we do not have a border, we just place the spike first in the spike
-    // buffer.
+    std::cerr << "source gid, no border: " << e.get_sender_gid() << std::endl;
+    // If we do not have a border vector, we just add the spike to the first
+    // element in the spike buffer.
     B_.spikes_[ 0 ].add_value(
       e.get_rel_delivery_steps(
         kernel().simulation_manager.get_slice_origin() ),
