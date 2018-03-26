@@ -290,6 +290,8 @@ void
 lfp_detector::init_buffers_()
 {
   B_.spikes_.clear(); // includes resize
+  B_.proj_vec_.clear();
+  B_.size_of_pop_connected_to_lfp_.clear();
   Archiving_Node::clear_history();
 
   B_.logger_.reset();
