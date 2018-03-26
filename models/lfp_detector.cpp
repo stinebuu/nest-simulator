@@ -59,7 +59,7 @@ lfp_detector::Parameters_::Parameters_()
   , tau_rise2( 1, 2.0468 )       // ms
   , tau_decay2( 1, 2.0456 )      // ms
   , normalizer( 1, 1.58075e-04 ) // mV / ms
-  , normalizer2( 1, 0 )          // mV / ms
+  , normalizer2( 1, 0.0 )        // mV / ms
 {
 }
 
@@ -178,11 +178,17 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
       "normalizer array must have same length as the tau arrays." );
   }
 
-  updateValue< std::vector< double > >( d, Name( "normalizer2" ), normalizer2 );
-  if ( normalizer2.size() != tau_rise2.size() )
+  bool normalizer2_flag = updateValue< std::vector< double > >( d, Name( "normalizer2" ), normalizer2 );
+  if ( normalizer2_flag and normalizer2.size() != tau_rise2.size() )
   {
     throw BadProperty(
       "normalizer2 array must have same length as the tau arrays." );
+  }
+  if ( not normalizer2_flag )
+  {
+    // If we do not send in normalizer2 vector, we need to make sure it is the
+    // the same size as the normalizer vector so that the update function works.
+    normalizer2.resize(normalizer.size(), 0.0);
   }
 
   double num_populations = std::sqrt( tau_rise.size() );
@@ -327,7 +333,6 @@ lfp_detector::calibrate()
                      / ( P_.tau_decay[ i ] - P_.tau_rise[ i ] ) )
       * ( V_.P11_[ i ] - V_.P22_[ i ] );
 
-    //if ( P_.normalizer2.size() != 1 and P_.normalizer2[ i ] != 0 )
     if ( P_.normalizer2[ i ] != 0 )
     {
       V_.P11_2_[ i ] = std::exp( -h / P_.tau_decay2[ i ] );
