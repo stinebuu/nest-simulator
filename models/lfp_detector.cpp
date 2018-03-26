@@ -319,6 +319,7 @@ lfp_detector::calibrate()
 
   B_.spikes_.resize( P_.n_receptors() );
   B_.proj_vec_.resize( P_.n_receptors() );
+  B_.size_of_pop_connected_to_lfp_.resize( V_.num_populations_, 0 );
 
   // normalizers will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
@@ -387,7 +388,16 @@ lfp_detector::calibrate()
         it != connectome.end();
         ++it )
   {
-    n_sources.push_back( it->get_source_gid() );
+    index source_gid = it->get_source_gid();
+    n_sources.push_back( source_gid );
+
+    long pop = get_pop_of_gid( source_gid );
+    if ( pop == -1 )
+    {
+      // Not in any of the populations
+      continue;
+    }
+    B_.size_of_pop_connected_to_lfp_[ pop ] += 1;
   }
   const TokenArray source_a = TokenArray( n_sources );
   connectome.clear();
@@ -529,6 +539,9 @@ lfp_detector::handle( SpikeEvent& e )
     std::set< index >::const_iterator set_itt;
     long proj = 0;
 
+    long source_pop = get_pop_of_gid( gid );
+    size_t size_of_pre = B_.size_of_pop_connected_to_lfp_[ source_pop ];
+
     for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end(); ++proj_it )
     {
       set_it = proj_it->find( gid );
@@ -544,12 +557,9 @@ lfp_detector::handle( SpikeEvent& e )
 
       if ( set_it != proj_it->end() )
       {
-        long source_pop = get_pop_of_gid( gid );
-        size_t pre_pop_size = P_.borders[source_pop*2 + 1] - P_.borders[source_pop*2] + 1;
-        std::cerr << "pre pop size: " << pre_pop_size << std::endl;
-        //std::cerr << "\ngid: " << gid << " proj: " << proj << std::endl;
-        B_.spikes_[ proj ].add_value(e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin() ), e.get_weight() * e.get_multiplicity() );
+        B_.spikes_[ proj ].add_value(e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin() ), e.get_weight() * e.get_multiplicity() * size_of_pre / proj_it->size() );
       }
+
       proj++;
     }
   }
@@ -575,8 +585,9 @@ long
 lfp_detector::get_pop_of_gid( const index& gid ) const
 {
   long pop = -1;
+
   // Iterate over borders to find the population of the GID.
-  for ( u_long i = 0; i <= P_.borders.size(); i += 2 )
+  for ( u_long i = 0; i < P_.borders.size(); i += 2 )
   {
     if ( ( u_long ) P_.borders[ i ] <= gid
       && gid <= ( u_long ) P_.borders[ i + 1 ] )

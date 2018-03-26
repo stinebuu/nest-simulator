@@ -214,6 +214,7 @@ private:
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
     std::vector< std::set< index > > proj_vec_;
+    std::vector< size_t > size_of_pop_connected_to_lfp_;
   };
 
   // ----------------------------------------------------------------
