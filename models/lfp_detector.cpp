@@ -178,7 +178,8 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
       "normalizer array must have same length as the tau arrays." );
   }
 
-  bool normalizer2_flag = updateValue< std::vector< double > >( d, Name( "normalizer2" ), normalizer2 );
+  bool normalizer2_flag = updateValue< std::vector< double > >(
+    d, Name( "normalizer2" ), normalizer2 );
   if ( normalizer2_flag and normalizer2.size() != tau_rise2.size() )
   {
     throw BadProperty(
@@ -188,7 +189,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
   {
     // If we do not send in normalizer2 vector, we need to make sure it is the
     // the same size as the normalizer vector so that the update function works.
-    normalizer2.resize(normalizer.size(), 0.0);
+    normalizer2.resize( normalizer.size(), 0.0 );
   }
 
   double num_populations = std::sqrt( tau_rise.size() );
@@ -431,28 +432,12 @@ lfp_detector::calibrate()
       continue;
     }
 
-    source_pop = get_pop_of_gid(con->get_source_gid());
-    target_pop = get_pop_of_gid(con->get_target_gid());
+    source_pop = get_pop_of_gid( con->get_source_gid() );
+    target_pop = get_pop_of_gid( con->get_target_gid() );
     index projection_index = source_pop * V_.num_populations_ + target_pop;
 
-    B_.proj_vec_[projection_index].insert(con->get_source_gid());
+    B_.proj_vec_[ projection_index ].insert( con->get_source_gid() );
   }
-
-  std::vector< std::set< index > >::const_iterator proj_it;
-  std::set< index >::const_iterator set_it;
-  long proj = 0;
-
-  for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end(); ++proj_it )
-  {
-    std::cerr << "projection nr.: " << proj << std::endl;
-    for ( set_it = proj_it->begin(); set_it != proj_it->end(); ++set_it)
-    {
-      std::cerr << *set_it << " ";
-    }
-    proj++;
-    std::cerr << "\n";
-  }
-
 }
 
 /* ----------------------------------------------------------------
@@ -533,33 +518,25 @@ lfp_detector::handle( SpikeEvent& e )
     // projection it belongs to.
     index gid = e.get_sender_gid();
 
-    //std::cerr << "\n" << "source gid: " << gid << std::endl;
-    //std::cerr << "receiver gid " << e.get_receiver_gid() << std::endl;
-
     std::vector< std::set< index > >::const_iterator proj_it;
     std::set< index >::const_iterator set_it;
-    std::set< index >::const_iterator set_itt;
     long proj = 0;
 
     long source_pop = get_pop_of_gid( gid );
     size_t size_of_pre = B_.size_of_pop_connected_to_lfp_[ source_pop ];
 
-    for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end(); ++proj_it )
+    for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end();
+          ++proj_it )
     {
       set_it = proj_it->find( gid );
-      //std::cerr << "\nset it: " << *set_it << " proj: " << proj << " gid: " << gid << std::endl;
-      std::cerr << "\nset size: " << proj_it->size() << std::endl;
-
-      //std::cerr << "projection nr.: " << proj << ", gid nr.: " << gid << ", gid's place in set: " << *set_it << ", set.begin(): " << *(proj_it->begin()) << ", set.end(): " << *(proj_it->end()) << std::endl;
-      for ( set_itt = proj_it->begin(); set_itt != proj_it->end(); ++set_itt)
-      {
-      //  std::cerr << *set_itt << " ";
-      }
-      //std::cerr << "\n";
 
       if ( set_it != proj_it->end() )
       {
-        B_.spikes_[ proj ].add_value(e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin() ), e.get_weight() * e.get_multiplicity() * size_of_pre / proj_it->size() );
+        B_.spikes_[ proj ].add_value(
+          e.get_rel_delivery_steps(
+            kernel().simulation_manager.get_slice_origin() ),
+          e.get_weight() * e.get_multiplicity() * size_of_pre
+            / proj_it->size() );
       }
 
       proj++;
@@ -567,7 +544,6 @@ lfp_detector::handle( SpikeEvent& e )
   }
   else
   {
-    std::cerr << "source gid, no border: " << e.get_sender_gid() << std::endl;
     // If we do not have a border vector, we just add the spike to the first
     // element in the spike buffer.
     B_.spikes_[ 0 ].add_value(
