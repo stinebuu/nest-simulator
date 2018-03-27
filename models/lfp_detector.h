@@ -213,7 +213,7 @@ private:
 
     /** buffers and sums up incoming spikes */
     std::vector< RingBuffer > spikes_;
-    std::vector< std::set< index > > proj_vec_;
+    std::vector< std::set< index > > projection_vector_;
   };
 
   // ----------------------------------------------------------------

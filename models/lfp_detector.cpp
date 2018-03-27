@@ -291,7 +291,7 @@ void
 lfp_detector::init_buffers_()
 {
   B_.spikes_.clear(); // includes resize
-  B_.proj_vec_.clear();
+  B_.projection_vector_.clear();
   Archiving_Node::clear_history();
 
   B_.logger_.reset();
@@ -320,7 +320,7 @@ lfp_detector::calibrate()
     State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * P_.n_receptors(), 0.0 );
 
   B_.spikes_.resize( P_.n_receptors() );
-  B_.proj_vec_.resize( P_.n_receptors() );
+  B_.projection_vector_.resize( P_.n_receptors() );
 
   V_.normalizer_.resize( P_.n_receptors() );
   V_.normalizer2_.resize( P_.n_receptors() );
@@ -354,7 +354,7 @@ lfp_detector::calibrate()
 
     B_.spikes_[ i ].resize();
     std::set< index > tmp_set;
-    B_.proj_vec_[ i ] = tmp_set;
+    B_.projection_vector_[ i ] = tmp_set;
   }
 
   // Get GIDs of nodes connected to the LFP recorder.
@@ -411,8 +411,11 @@ lfp_detector::calibrate()
         con != connectome.end();
         ++con )
   {
-    Node* target_node = kernel().node_manager.get_node(
-      con->get_target_gid(), con->get_target_thread() );
+    index source_gid = con->get_source_gid();
+    index target_gid = con->get_target_gid();
+
+    Node* target_node =
+      kernel().node_manager.get_node( target_gid, con->get_target_thread() );
 
     // Skip if target is a device or this model.
     if ( not target_node->has_proxies()
@@ -422,14 +425,14 @@ lfp_detector::calibrate()
     }
 
     // Find the projection of the connection
-    source_pop = get_pop_of_gid( con->get_source_gid() );
-    target_pop = get_pop_of_gid( con->get_target_gid() );
+    source_pop = get_pop_of_gid( source_gid );
+    target_pop = get_pop_of_gid( target_gid );
     index projection_index = source_pop * V_.num_populations_ + target_pop;
 
     // Insert the source in the right set in the projection vector. That is,
     // insert the source in the set placed in the projection's place in the
     // projection vector.
-    B_.proj_vec_[ projection_index ].insert( con->get_source_gid() );
+    B_.projection_vector_[ projection_index ].insert( source_gid );
   }
 }
 
@@ -447,6 +450,8 @@ lfp_detector::update( Time const& origin, const long from, const long to )
   {
     for ( size_t i = 0; i < P_.n_receptors(); ++i )
     {
+      double spikes = B_.spikes_[ i ].get_value( lag );
+
       // Contribution from first beta
       S_.y_[ State_::G + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                            * i ) ] = V_.P21_[ i ]
@@ -469,17 +474,15 @@ lfp_detector::update( Time const& origin, const long from, const long to )
       S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                             * i ) ] *= V_.P11_[ i ];
 
-      S_.y_[ State_::DG
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer_[ i ] * B_.spikes_[ i ].get_value_wfr_update( lag );
+      S_.y_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                            * i ) ] += V_.normalizer_[ i ] * spikes;
 
       // Contribution from second beta
       S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
                              * i ) ] *= V_.P11_2_[ i ];
 
-      S_.y2_[ State_::DG
-        + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR * i ) ] +=
-        V_.normalizer2_[ i ] * B_.spikes_[ i ].get_value( lag );
+      S_.y2_[ State_::DG + ( State_::NUMBER_OF_STATES_ELEMENTS_PER_RECEPTOR
+                             * i ) ] += V_.normalizer2_[ i ] * spikes;
     }
 
     // log state data
@@ -513,25 +516,24 @@ lfp_detector::handle( SpikeEvent& e )
 
     std::vector< std::set< index > >::const_iterator proj_it;
     std::set< index >::const_iterator set_it;
-    long proj = 0;
+    size_t proj_indx = 0;
 
     // Go through projection vector, see if the incoming GID is in any of the
     // sets, and place add it to the spike buffer in the space of the projection
     // if it is.
-    for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end();
-          ++proj_it )
+    for ( proj_it = B_.projection_vector_.begin();
+          proj_it != B_.projection_vector_.end();
+          ++proj_it, ++proj_indx )
     {
       set_it = proj_it->find( gid );
 
       if ( set_it != proj_it->end() )
       {
-        B_.spikes_[ proj ].add_value(
+        B_.spikes_[ proj_indx ].add_value(
           e.get_rel_delivery_steps(
             kernel().simulation_manager.get_slice_origin() ),
           e.get_weight() * e.get_multiplicity() );
       }
-
-      proj++;
     }
   }
   else
