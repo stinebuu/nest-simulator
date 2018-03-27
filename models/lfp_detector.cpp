@@ -91,7 +91,6 @@ lfp_detector::State_& lfp_detector::State_::operator=( const State_& s )
 void
 lfp_detector::Parameters_::get( DictionaryDatum& d ) const
 {
-  def< size_t >( d, names::n_receptors, n_receptors() );
   ArrayDatum tau_rise_ad( tau_rise );
   ArrayDatum tau_decay_ad( tau_decay );
   ArrayDatum normalizer_ad( normalizer );
@@ -99,6 +98,7 @@ lfp_detector::Parameters_::get( DictionaryDatum& d ) const
   ArrayDatum tau_decay2_ad( tau_decay2 );
   ArrayDatum normalizer2_ad( normalizer2 );
   ArrayDatum borders_ad( borders );
+  def< size_t >( d, names::n_receptors, n_receptors() );
   def< ArrayDatum >( d, names::tau_rise, tau_rise_ad );
   def< ArrayDatum >( d, names::tau_decay, tau_decay_ad );
   def< ArrayDatum >( d, names::normalizer, normalizer_ad );
@@ -187,7 +187,7 @@ lfp_detector::Parameters_::set( const DictionaryDatum& d )
   }
   if ( not normalizer2_flag )
   {
-    // If we do not send in normalizer2 vector, we need to make sure it is the
+    // If we do not send in normalizer2 vector, we need to make sure it is
     // the same size as the normalizer vector so that the update function works.
     normalizer2.resize( normalizer.size(), 0.0 );
   }
@@ -324,7 +324,6 @@ lfp_detector::calibrate()
   B_.proj_vec_.resize( P_.n_receptors() );
   B_.size_of_pop_connected_to_lfp_.resize( V_.num_populations_, 0 );
 
-  // normalizers will be initialized in the loop below.
   V_.normalizer_.resize( P_.n_receptors() );
   V_.normalizer2_.resize( P_.n_receptors() );
 
@@ -369,11 +368,12 @@ lfp_detector::calibrate()
   const TokenArray* self_source_a = 0;
   long synapse_label = UNLABELED_CONNECTION;
 
-  // The gid of the lfp_detector
+  // The GID of the lfp_detector
   self_target.push_back( this->get_gid() );
   const TokenArray self_target_a = TokenArray( self_target );
 
-  // We first find all connections to the lfp_detector
+  // We first find all connections to the lfp_detector. The lfp_detector is
+  // always the target of a connection, so we are looking for the sources.
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
         ++syn_id )
@@ -382,11 +382,13 @@ lfp_detector::calibrate()
       connectome, self_source_a, &self_target_a, syn_id, synapse_label );
   }
 
-  // Get all targets of these neurons.
+  // Want to get all targets of these neurons.
   std::vector< size_t > n_sources;
   const TokenArray* target_a = 0;
 
-  // All source gids that are connected to the lfp_detector
+  // Put all source GIDs that are connected to the lfp_detector in a vector,
+  // and calculate the number of neurons connected to the lfp_detector in each
+  // population.
   for ( std::deque< ConnectionID >::const_iterator it = connectome.begin();
         it != connectome.end();
         ++it )
@@ -408,7 +410,7 @@ lfp_detector::calibrate()
   long source_pop;
   long target_pop;
 
-  // All connections to the sources found above
+  // Find all connections to the sources found above
   for ( size_t syn_id = 0;
         syn_id < kernel().model_manager.get_num_synapse_prototypes();
         ++syn_id )
@@ -432,10 +434,14 @@ lfp_detector::calibrate()
       continue;
     }
 
+    // Find the projection of the connection
     source_pop = get_pop_of_gid( con->get_source_gid() );
     target_pop = get_pop_of_gid( con->get_target_gid() );
     index projection_index = source_pop * V_.num_populations_ + target_pop;
 
+    // Insert the source in the right set in the projection vector. That is,
+    // insert the source in the set placed in the projection's place in the
+    // projection vector.
     B_.proj_vec_[ projection_index ].insert( con->get_source_gid() );
   }
 }
@@ -525,6 +531,9 @@ lfp_detector::handle( SpikeEvent& e )
     long source_pop = get_pop_of_gid( gid );
     size_t size_of_pre = B_.size_of_pop_connected_to_lfp_[ source_pop ];
 
+    // Go through projection vector, see if the incoming GID is in any of the
+    // sets, and place add it to the spike buffer in the space of the projection
+    // if it is.
     for ( proj_it = B_.proj_vec_.begin(); proj_it != B_.proj_vec_.end();
           ++proj_it )
     {

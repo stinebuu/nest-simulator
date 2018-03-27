@@ -137,7 +137,7 @@ private:
     std::vector< double > tau_decay2; //!< Decay time in ms for
                                       //!< the second beta function.
 
-    //!< Normalizing factor for the first and second beta functions.
+    //!< Normalizing factors for the first and second beta functions.
     std::vector< double > normalizer;
     std::vector< double > normalizer2;
 
