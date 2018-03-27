@@ -292,7 +292,6 @@ lfp_detector::init_buffers_()
 {
   B_.spikes_.clear(); // includes resize
   B_.proj_vec_.clear();
-  B_.size_of_pop_connected_to_lfp_.clear();
   Archiving_Node::clear_history();
 
   B_.logger_.reset();
@@ -322,7 +321,6 @@ lfp_detector::calibrate()
 
   B_.spikes_.resize( P_.n_receptors() );
   B_.proj_vec_.resize( P_.n_receptors() );
-  B_.size_of_pop_connected_to_lfp_.resize( V_.num_populations_, 0 );
 
   V_.normalizer_.resize( P_.n_receptors() );
   V_.normalizer2_.resize( P_.n_receptors() );
@@ -386,23 +384,12 @@ lfp_detector::calibrate()
   std::vector< size_t > n_sources;
   const TokenArray* target_a = 0;
 
-  // Put all source GIDs that are connected to the lfp_detector in a vector,
-  // and calculate the number of neurons connected to the lfp_detector in each
-  // population.
+  // Put all source GIDs that are connected to the lfp_detector in a vector.
   for ( std::deque< ConnectionID >::const_iterator it = connectome.begin();
         it != connectome.end();
         ++it )
   {
-    index source_gid = it->get_source_gid();
-    n_sources.push_back( source_gid );
-
-    long pop = get_pop_of_gid( source_gid );
-    if ( pop == -1 )
-    {
-      // Not in any of the populations
-      continue;
-    }
-    B_.size_of_pop_connected_to_lfp_[ pop ] += 1;
+    n_sources.push_back( it->get_source_gid() );
   }
   const TokenArray source_a = TokenArray( n_sources );
   connectome.clear();
@@ -528,9 +515,6 @@ lfp_detector::handle( SpikeEvent& e )
     std::set< index >::const_iterator set_it;
     long proj = 0;
 
-    long source_pop = get_pop_of_gid( gid );
-    size_t size_of_pre = B_.size_of_pop_connected_to_lfp_[ source_pop ];
-
     // Go through projection vector, see if the incoming GID is in any of the
     // sets, and place add it to the spike buffer in the space of the projection
     // if it is.
@@ -544,8 +528,7 @@ lfp_detector::handle( SpikeEvent& e )
         B_.spikes_[ proj ].add_value(
           e.get_rel_delivery_steps(
             kernel().simulation_manager.get_slice_origin() ),
-          e.get_weight() * e.get_multiplicity() * size_of_pre
-            / proj_it->size() );
+          e.get_weight() * e.get_multiplicity() );
       }
 
       proj++;
