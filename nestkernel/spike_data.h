@@ -47,10 +47,10 @@ protected:
   const static unsigned int complete_marker_ = 2;
   const static unsigned int invalid_marker_ = 3;
 
-  index lcid_ : 27;         //!< local connection index
+  index lcid_ : 30;         //!< local connection index
   unsigned int marker_ : 2; //!< status flag
   unsigned int lag_ : 14;   //!< lag in this min-delay interval
-  thread tid_ : 10;         //!< thread index
+  thread tid_ : 7;          //!< thread index
   synindex syn_id_ : 8;     //!< synapse-type index
 
 public:

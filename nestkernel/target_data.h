@@ -36,8 +36,8 @@ namespace nest
 class TargetDataFields
 {
 private:
-  unsigned int lcid_ : 27;
-  unsigned int tid_ : 10;
+  unsigned int lcid_ : 30;
+  unsigned int tid_ : 7;
   unsigned int syn_id_ : 8;
 
 public:

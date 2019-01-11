@@ -79,9 +79,9 @@ private:
   uint64_t remote_target_id_;
 
   // define the structure of the remote target neuron identifier
-  static constexpr uint8_t NUM_BITS_LCID = 27U;
+  static constexpr uint8_t NUM_BITS_LCID = 30U;
   static constexpr uint8_t NUM_BITS_RANK = 20U;
-  static constexpr uint8_t NUM_BITS_TID = 10U;
+  static constexpr uint8_t NUM_BITS_TID = 7U;
   static constexpr uint8_t NUM_BITS_SYN_ID = 6U;
   static constexpr uint8_t NUM_BITS_PROCESSED_FLAG = 1U;
 
