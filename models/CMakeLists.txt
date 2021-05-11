@@ -137,6 +137,7 @@ set( models_sources
     vogels_sprekeler_synapse.h
     weight_recorder.h weight_recorder.cpp
     spike_dilutor.h spike_dilutor.cpp
+    wang.h wang.cpp
     )
 
 add_library( models ${models_sources} )
