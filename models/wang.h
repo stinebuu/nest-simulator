@@ -44,9 +44,6 @@
 // C++ includes
 #include <valarray>
 
-// Includes from sli:
-//#include "dictdatum.h"
-
 namespace nest
 {
 /**
@@ -221,10 +218,6 @@ private:
     double tau_rise_NMDA;
     double tau_decay_NMDA;
     double alpha;
-    double g_ext_AMPA;
-    double g_rec_AMPA;
-    double g_GABA;
-    double g_NMDA;
     //!  can be wrong, should be mM
     double conc_Mg2;
 
@@ -236,13 +229,11 @@ private:
     Parameters_();
 
     void get( DictionaryDatum& ) const;             //!< Store current values in dictionary
-    void set( const DictionaryDatum&, Node* node ); //!< Set values from dicitonary
+    void set( const DictionaryDatum&, Node* node ); //!< Set values from dictionary
   };
 
   /**
    * Dynamic state of the neuron.
-   *
-   *
    *
    * These are the state variables that are advanced in time by calls to
    * @c update(). In many models, some or all of them can be set by the user
@@ -264,16 +255,18 @@ private:
     //! Symbolic indices to the elements of the state vector y
     enum StateVecElems
     {
-      V_m,
+      V_m = 0,
       G_AMPA,
       G_GABA,
-      G_NMDA,
-      x_NMDA,
-      STATE_VEC_SIZE
+      G_NMDA_base, // (x,g), (x,g), (x,g), ...
     };
 
+    size_t state_vec_size;
+
+    long num_ports_;
+
     //! state vector, must be C-array for GSL solver
-    double ode_state_[ STATE_VEC_SIZE ];
+    double* ode_state_;
     int r_; //!< number of refractory steps remaining
 
     State_( const Parameters_& ); //!< Default initialization
@@ -286,8 +279,6 @@ private:
 
   /**
    * Internal variables of the neuron.
-   *
-   *
    *
    * These variables must be initialized by @c calibrate, which is called before
    * the first call to @c update() upon each call to @c Simulate.
@@ -303,6 +294,7 @@ private:
 
   /**
    * Buffers of the neuron.
+   *
    * Usually buffers for incoming spikes and data logged for analog recorders.
    * Buffers must be initialized by @c init_buffers_(), which is called before
    * @c calibrate() on the first call to @c Simulate after the start of NEST,
@@ -313,8 +305,8 @@ private:
   **/
   struct Buffers_
   {
-    Buffers_(wang &);
-    Buffers_(const Buffers_ &, wang &);
+    Buffers_( wang & );
+    Buffers_( const Buffers_ &, wang & );
 
     /**
      * Logger for all analog data
@@ -324,10 +316,7 @@ private:
     // -----------------------------------------------------------------------
     //   Buffers and sums of incoming spikes per timestep
     // -----------------------------------------------------------------------
-    //std::vector< RingBuffer > spike_inputs_;
-    RingBuffer spike_AMPA_;
-    RingBuffer spike_GABA_;
-    std::valarray< RingBuffer > spike_array_NMDA_;
+    std::vector< RingBuffer > spikes_;
 
     // -----------------------------------------------------------------------
     //   GSL ODE solver data structures
@@ -345,14 +334,6 @@ private:
     double step_;             //!< step size in ms
     double integration_step_; //!< current integration time step, updated by GSL
   };
-
-  // -------------------------------------------------------------------------
-  //   Getters/setters for input buffers
-  // -------------------------------------------------------------------------
-
-  inline RingBuffer& get_AMPA_spikes() { return B_.spike_AMPA_; };
-  inline RingBuffer& get_GABA_spikes() { return B_.spike_GABA_; };
-  inline RingBuffer& get_NMDA_spikes() { return B_.spike_array_NMDA_; };
 
   // Access functions for UniversalDataLogger -------------------------------
 
@@ -396,8 +377,6 @@ wang::send_test_event( Node& target, rport receptor_type, synindex, bool )
 inline port
 wang::handles_test_event( SpikeEvent&, port receptor_type )
 {
-  //assert( B_.spike_inputs_.size() == 3 );
-
   if ( !( INF_SPIKE_RECEPTOR < receptor_type && receptor_type < SUP_SPIKE_RECEPTOR ) )
   {
     throw UnknownReceptorType( receptor_type, get_name() );
@@ -405,6 +384,10 @@ wang::handles_test_event( SpikeEvent&, port receptor_type )
   }
   else
   {
+    if ( receptor_type == NMDA )
+    {
+      ++S_.num_ports_;
+    }
     return receptor_type - 1;
   }
 }

@@ -60,7 +60,7 @@ namespace nest
 
     insert_( "G_AMPA", &wang::get_ode_state_elem_< wang::State_::G_AMPA > );
     insert_( "G_GABA", &wang::get_ode_state_elem_< wang::State_::G_GABA > );
-    insert_( "G_NMDA", &wang::get_ode_state_elem_< wang::State_::G_NMDA > );
+    //insert_( "G_NMDA", &wang::get_ode_state_elem_< wang::State_::G_NMDA > );
   }
 }
 // ---------------------------------------------------------------------------
@@ -68,12 +68,12 @@ namespace nest
 // ---------------------------------------------------------------------------
 
 nest::wang::Parameters_::Parameters_()
-  : E_L( -70.0 )          // as mV
+  : E_L( -70.0 )          // mV
   , E_ex( 0.0 )           // as mV
   , E_in(-70.0)           // as mV
   , V_th(-50.0)           // as mV
   , V_reset(-55.0)        // as mV
-  , C_m( 0.5 )            // as nF
+  , C_m( 500.0 )          // as pF
   , g_L( 25.0 )           // as nS
   , t_ref( 2.0 )          // as ms
   , tau_AMPA( 2.0 )       // as ms
@@ -81,41 +81,52 @@ nest::wang::Parameters_::Parameters_()
   , tau_rise_NMDA( 2.0 )  // as ms
   , tau_decay_NMDA( 100 ) // as ms
   , alpha( 0.5 )          // as 1 / ms
-  , g_ext_AMPA( 2.1 )     // as ns
-  , g_rec_AMPA( 0.05 )    // as ns
-  , g_GABA( 1.3 )         // as ns
-  , g_NMDA( 0.165 )       // as ns
   , conc_Mg2( 1 )         // as mM
   , gsl_error_tol( 1e-3 )
 {
 }
 
 nest::wang::State_::State_(  const Parameters_& p )
-  : r_( 0 )
+  : state_vec_size ( 0 )
+  , num_ports_( 2 )
+  , ode_state_( nullptr )
+  , r_( 0 )
 {
   // initial values for state variables
-  ode_state_[ V_m ] = p.E_L; // as mV
-  ode_state_[ G_NMDA ] = 0.0; // as real
-  ode_state_[ G_AMPA ] = 0.0; // as real
-  ode_state_[ G_GABA ] = 0.0; // as real
+  ode_state_ = new double[ G_NMDA_base ];
+  assert( ode_state_ );
+
+  ode_state_[ V_m ] = p.E_L;
+  ode_state_[ G_AMPA ] = 0.0;
+  ode_state_[ G_GABA ] = 0.0;
+
+  state_vec_size = G_NMDA_base;
 }
 
 nest::wang::State_::State_( const State_& s )
-  : r_( s.r_ )
+  : state_vec_size ( s.state_vec_size )
+  , num_ports_( s.num_ports_ )
+  , ode_state_( nullptr )
+  , r_( s.r_ )
 {
-  for ( size_t i = 0; i < STATE_VEC_SIZE; ++i )
-  {
-    ode_state_[ i ] = s.ode_state_[ i ];
-  }
+  assert( s.num_ports_ == 2 );
+  assert( state_vec_size == G_NMDA_base );
+
+  ode_state_ = new double[ G_NMDA_base ];
+  assert( ode_state_ );
+
+  ode_state_[ V_m ] = s.ode_state_[ V_m ];
+  ode_state_[ G_AMPA ] = s.ode_state_[ G_AMPA ];
+  ode_state_[ G_GABA ] = s.ode_state_[ G_GABA ];
 }
 
 nest::wang::State_& nest::wang::State_::operator=( const State_& s )
 {
+  assert( false );
   assert( this != &s ); // would be bad logical error in program
-  for ( size_t i = 0; i < STATE_VEC_SIZE; ++i )
-  {
-    ode_state_[ i ] = s.ode_state_[ i ];
-  }
+  assert( s.ode_state_ == nullptr );
+  assert( s.num_ports_ == 2 );
+
   r_ = s.r_;
   return *this;
 }
@@ -140,10 +151,6 @@ nest::wang::Parameters_::get( DictionaryDatum& d ) const
   def< double >( d, names::tau_rise_NMDA, tau_rise_NMDA );
   def< double >( d, names::tau_decay_NMDA, tau_decay_NMDA );
   def< double >( d, names::alpha, alpha );
-  def< double >( d, names::g_ext_AMPA, g_ext_AMPA );
-  def< double >( d, names::g_rec_AMPA, g_rec_AMPA );
-  def< double >( d, names::g_GABA, g_GABA );
-  def< double >( d, names::g_NMDA, g_NMDA );
   def< double >( d, names::conc_Mg2, conc_Mg2 );
   def< double >( d, names::gsl_error_tol, gsl_error_tol );
 }
@@ -169,10 +176,6 @@ nest::wang::Parameters_::set( const DictionaryDatum& d, Node* node )
   updateValueParam< double >( d, names::tau_decay_NMDA, tau_decay_NMDA, node );
 
   updateValueParam< double >( d, names::alpha, alpha, node );
-  updateValueParam< double >( d, names::g_ext_AMPA, g_ext_AMPA, node );
-  updateValueParam< double >( d, names::g_rec_AMPA, g_rec_AMPA, node );
-  updateValueParam< double >( d, names::g_GABA, g_GABA, node );
-  updateValueParam< double >( d, names::g_NMDA, g_NMDA, node );
   updateValueParam< double >( d, names::conc_Mg2, conc_Mg2, node );
   updateValueParam< double >( d, names::gsl_error_tol, gsl_error_tol, node );
 
@@ -196,10 +199,6 @@ nest::wang::Parameters_::set( const DictionaryDatum& d, Node* node )
   {
     throw BadProperty( "alpha > 0 required." );
   }
-  if ( g_ext_AMPA <= 0 or g_rec_AMPA <= 0 or g_GABA <= 0 or g_NMDA <= 0 )
-  {
-    throw BadProperty( "All synaptic conductances must be strictly positive." );
-  }
   if ( conc_Mg2 <= 0 )
   {
     throw BadProperty( "Mg2 concentration must be strictly positive." );
@@ -215,16 +214,15 @@ nest::wang::State_::get( DictionaryDatum& d ) const
 {
   //TODO: SHOULD THESE BE NAMES????
   def< double >( d, names::V_m, ode_state_[ V_m ] ); // Membrane potential
-  def< double >( d, "G_NMDA", ode_state_[ G_NMDA ] );
   def< double >( d, "G_AMPA", ode_state_[ G_AMPA ] );
   def< double >( d, "G_GABA", ode_state_[ G_GABA ] );
+  // total summen av NMDA
 }
 
 void
 nest::wang::State_::set( const DictionaryDatum& d, const Parameters_&, Node* node )
 {
   updateValueParam< double >( d, names::V_m, ode_state_[ V_m ], node );
-  updateValueParam< double >( d, "G_NMDA", ode_state_[ G_NMDA ], node );
   updateValueParam< double >( d, "G_AMPA", ode_state_[ G_AMPA ], node );
   updateValueParam< double >( d, "G_GABA", ode_state_[ G_GABA ], node );
 }
@@ -232,7 +230,7 @@ nest::wang::State_::set( const DictionaryDatum& d, const Parameters_&, Node* nod
 
 nest::wang::Buffers_::Buffers_( wang &n )
   : logger_( n )
-  //, spike_inputs_( std::vector< nest::RingBuffer >( SUP_SPIKE_RECEPTOR - 1 ) )
+  , spikes_()
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
@@ -244,7 +242,7 @@ nest::wang::Buffers_::Buffers_( wang &n )
 
 nest::wang::Buffers_::Buffers_( const Buffers_ &, wang &n )
   : logger_( n )
-  //, spike_inputs_( std::vector< nest::RingBuffer >( SUP_SPIKE_RECEPTOR - 1 ) )
+  , spikes_()
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
@@ -303,6 +301,11 @@ nest::wang::~wang()
   {
     gsl_odeiv_evolve_free( B_.e_ );
   }
+
+  if ( S_.ode_state_ )
+  {
+    delete[] S_.ode_state_;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -314,24 +317,43 @@ nest::wang::init_state_( const Node& proto )
 {
   const wang& pr = downcast< wang >( proto );
   S_ = pr.S_;
+
+  assert( S_.state_vec_size == State_::G_NMDA_base );
+
+  double* old_state = S_.ode_state_;
+  S_.state_vec_size = State_::G_NMDA_base + 2 * ( S_.num_ports_ - 2 );
+  S_.ode_state_ = new double [ S_.state_vec_size ];
+
+  assert( S_.ode_state_ );
+
+  S_.ode_state_[ State_::V_m ] = old_state[ State_::V_m ];
+  S_.ode_state_[ State_::G_AMPA ] = old_state[ State_::G_AMPA ];
+  S_.ode_state_[ State_::G_GABA ] = old_state[ State_::G_GABA ];
+
+  for ( size_t i = State_::G_NMDA_base; i < S_.state_vec_size; ++i )
+  {
+    S_.ode_state_[ i ] = 0.0;
+  }
+
+  delete[] old_state;
 }
 
 void
 nest::wang::init_buffers_()
 {
-  get_AMPA_spikes().clear(); //includes resize
-  get_GABA_spikes().clear(); //includes resize
+  B_.spikes_.resize( S_.num_ports_ );
 
-  //TODO: denne blir feil.
-  //get_NMDA_spikes().clear(); //includes resize
-  get_NMDA_spikes().clear(); //includes resize
+  for ( auto& sb : B_.spikes_ )
+  {
+    sb.clear();
+  }
 
   B_.logger_.reset(); // includes resize
   ArchivingNode::clear_history();
 
   if ( B_.s_ == 0 )
   {
-    B_.s_ = gsl_odeiv_step_alloc( gsl_odeiv_step_rkf45, State_::STATE_VEC_SIZE );
+    B_.s_ = gsl_odeiv_step_alloc( gsl_odeiv_step_rkf45, S_.state_vec_size );
   }
   else
   {
@@ -349,7 +371,7 @@ nest::wang::init_buffers_()
 
   if ( B_.e_ == 0 )
   {
-    B_.e_ = gsl_odeiv_evolve_alloc( State_::STATE_VEC_SIZE );
+    B_.e_ = gsl_odeiv_evolve_alloc( S_.state_vec_size );
   }
   else
   {
@@ -358,7 +380,7 @@ nest::wang::init_buffers_()
 
   B_.sys_.function = wang_dynamics;
   B_.sys_.jacobian = NULL;
-  B_.sys_.dimension = State_::STATE_VEC_SIZE;
+  B_.sys_.dimension = S_.state_vec_size;
   B_.sys_.params = reinterpret_cast< void* >( this );
   B_.step_ = nest::Time::get_resolution().get_ms();
   B_.integration_step_ = nest::Time::get_resolution().get_ms();
@@ -390,28 +412,30 @@ nest::wang_dynamics(double, const double ode_state[], double f[], void* pnode)
   // ode_state[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.ode_state[].
 
-  const double I_ext_AMPA =
-    node.P_.g_ext_AMPA * ( ode_state[ State_::V_m ] - node.P_.E_ex ) * ode_state[ State_::G_AMPA ];
+  const double I_AMPA = ( ode_state[ State_::V_m ] - node.P_.E_ex ) * ode_state[ State_::G_AMPA ];
 
-  // MÅ GJØRE NOE MED VEKT, tror kanskje det er i update?
-  const double I_rec_AMPA =
-    node.P_.g_rec_AMPA * ( ode_state[ State_::V_m ] - node.P_.E_ex ) * ode_state[ State_::G_AMPA ];
+  const double I_rec_GABA = ( ode_state[ State_::V_m ] - node.P_.E_in ) * ode_state[ State_::G_GABA ];
 
-  const double I_rec_GABA =
-    node.P_.g_GABA * ( ode_state[ State_::V_m ] - node.P_.E_in ) * ode_state[ State_::G_GABA ];
+  double total_NMDA = 0; //summen over NMDA_G i state
+  for( size_t i = State_::G_NMDA_base + 1; i < node.S_.state_vec_size; i+=2 )
+  {
+    total_NMDA += ode_state[ i ];
+  }
 
-  // TRENGER VEKT, OG SUMMERING(?)
-  const double I_rec_NMDA =
-      node.P_.g_NMDA * ( ode_state[ State_::V_m ] - node.P_.E_ex ) / ( 1 + node.P_.conc_Mg2 * std::exp( -0.062 * ode_state[ State_::V_m ] / 3.57 ) ) * ode_state[ State_::G_NMDA ];
+  const double I_rec_NMDA = ( ode_state[ State_::V_m ] - node.P_.E_ex ) / ( 1 + node.P_.conc_Mg2 * std::exp( -0.062 * ode_state[ State_::V_m ] ) / 3.57 ) * total_NMDA;
 
-  const double I_syn = I_ext_AMPA + I_rec_AMPA + I_rec_GABA + I_rec_NMDA;
+  const double I_syn = I_AMPA + I_rec_GABA + I_rec_NMDA;
 
   f[ State_::V_m ] = ( -node.P_.g_L * ( ode_state[ State_::V_m ] - node.P_.E_L ) - I_syn ) / node.P_.C_m;
 
   f[ State_::G_AMPA ] = -ode_state[ State_::G_AMPA ] / node.P_.tau_AMPA;
   f[ State_::G_GABA ] = -ode_state[ State_::G_GABA ] / node.P_.tau_GABA;
-  f[ State_::G_NMDA ] = -ode_state[ State_::G_NMDA ] / node.P_.tau_decay_NMDA + node.P_.alpha * ode_state[ State_::x_NMDA ] * ( 1 - ode_state[ State_::G_NMDA ] );
-  f[ State_::x_NMDA ] = -ode_state[ State_::x_NMDA ] / node.P_.tau_rise_NMDA;
+
+  for( size_t i = State_::G_NMDA_base; i < node.S_.state_vec_size; i+=2 )
+  {
+    f[ i + 1 ] = -ode_state[ i + 1 ] / node.P_.tau_decay_NMDA + node.P_.alpha * ode_state[ i ] * ( 1 - ode_state[ i + 1 ] );
+    f[ i ] = -ode_state[ i ] / node.P_.tau_rise_NMDA;
+  }
 
   return GSL_SUCCESS;
 }
@@ -452,19 +476,29 @@ nest::wang::update(nest::Time const & origin,const long from, const long to)
       }
     }
 
-    /* replace analytically solvable variables with precisely integrated values  */
-    S_.ode_state_[ State_::G_AMPA ] += get_AMPA_spikes().get_value( lag );
-    S_.ode_state_[ State_::G_GABA ] += get_GABA_spikes().get_value( lag );
-    S_.ode_state_[ State_::x_NMDA ] += get_NMDA_spikes().get_value( lag );
+    S_.ode_state_[ State_::G_AMPA ] += B_.spikes_[ AMPA - 1 ].get_value( lag );
+    S_.ode_state_[ State_::G_GABA ] += B_.spikes_[ GABA - 1 ].get_value( lag );
+
+    for( size_t i = NMDA - 1; i < B_.spikes_.size(); ++i )
+    {
+      const int si = i - ( NMDA - 1 );
+
+      assert( si >= 0 );
+      assert( State_::G_NMDA_base + si * 2 < S_.state_vec_size );
+
+      S_.ode_state_[ State_::G_NMDA_base + si * 2 ] += B_.spikes_.at( i ).get_value( lag );
+    }
 
     // absolute refractory period
     if ( S_.r_ != 0 )
-    { // neuron is absolute refractory
+    {
+      // neuron is absolute refractory
       --S_.r_;
       S_.ode_state_[ State_::V_m ] = P_.V_reset;
     }
     else if ( S_.ode_state_[ State_::V_m ] >= P_.V_th )
-    { // neuron is not absolute refractory
+    {
+      // neuron is not absolute refractory
       S_.r_ = V_.RefractoryCounts;
       S_.ode_state_[ State_::V_m ] = P_.V_reset;
 
@@ -492,29 +526,10 @@ void
 nest::wang::handle( nest::SpikeEvent &e )
 {
   assert( e.get_delay_steps() > 0 );
-  //assert( e.get_rport() < static_cast< int >( B_.spike_inputs_.size() ) );
-  double steps = e.get_rel_delivery_steps( nest::kernel().simulation_manager.get_slice_origin() );
-  double weight_mul = e.get_weight() * e.get_multiplicity();
+  assert( e.get_rport() < static_cast< int >( B_.spikes_.size() ) );
 
-  if ( e.get_rport() == 0 )
-  {
-    B_.spike_AMPA_.add_value( steps, weight_mul );
-  }
-  else if ( e.get_rport() == 1 )
-  {
-    B_.spike_GABA_.add_value( steps, weight_mul );
-  }
-  else if ( e.get_rport() == 2 )
-  {
-    B_.spike_array_NMDA_= B_.spike_array_NMDA_.apply( []( RingBuffer rb ){ return rb.add_value( steps, weight_mul ); } );
-  }
-  else
-  {
-    throw BadProperty( "Specified receptor not defined." );
-  }
+  const double steps = e.get_rel_delivery_steps( nest::kernel().simulation_manager.get_slice_origin() );
+  const double weight = e.get_weight() * e.get_multiplicity();
 
-
-  //B_.spike_inputs_[ e.get_rport() ].add_value(
-  //  e.get_rel_delivery_steps( nest::kernel().simulation_manager.get_slice_origin() ),
-  //  e.get_weight() * e.get_multiplicity() );
+  B_.spikes_[ e.get_rport() ].add_value( steps, weight );
 }
