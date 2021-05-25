@@ -41,15 +41,17 @@
 #include "integerdatum.h"
 #include "lockptrdatum.h"
 
-// ---------------------------------------------------------------------------
-//   Recordables map
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Recordables map
+ * --------------------------------------------------------------------------- */
 nest::RecordablesMap< nest::iaf_wang_2002 > nest::iaf_wang_2002::recordablesMap_;
 
 namespace nest
 {
-  // Override the create() method with one call to RecordablesMap::insert_()
-  // for each quantity to be recorded.
+  /*
+   * Override the create() method with one call to RecordablesMap::insert_()
+   * for each quantity to be recorded.
+   */
   template <> void RecordablesMap< iaf_wang_2002 >::create()
   {
     // add state variables to recordables map
@@ -59,28 +61,27 @@ namespace nest
 
     insert_( "G_AMPA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
     insert_( "G_GABA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
-    //insert_( "G_NMDA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_NMDA > );
   }
 }
-// ---------------------------------------------------------------------------
-//  Default constructors defining default parameters and state
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Default constructors defining default parameters and state
+ * --------------------------------------------------------------------------- */
 
 nest::iaf_wang_2002::Parameters_::Parameters_()
   : E_L( -70.0 )          // mV
-  , E_ex( 0.0 )           // as mV
-  , E_in(-70.0)           // as mV
-  , V_th(-50.0)           // as mV
-  , V_reset(-55.0)        // as mV
-  , C_m( 500.0 )          // as pF
-  , g_L( 25.0 )           // as nS
-  , t_ref( 2.0 )          // as ms
-  , tau_AMPA( 2.0 )       // as ms
-  , tau_GABA( 5.0 )       // as ms
-  , tau_rise_NMDA( 2.0 )  // as ms
-  , tau_decay_NMDA( 100 ) // as ms
-  , alpha( 0.5 )          // as 1 / ms
-  , conc_Mg2( 1 )         // as mM
+  , E_ex( 0.0 )           // mV
+  , E_in(-70.0)           // mV
+  , V_th(-50.0)           // mV
+  , V_reset(-55.0)        // mV
+  , C_m( 500.0 )          // pF
+  , g_L( 25.0 )           // nS
+  , t_ref( 2.0 )          // ms
+  , tau_AMPA( 2.0 )       // ms
+  , tau_GABA( 5.0 )       // ms
+  , tau_rise_NMDA( 2.0 )  // ms
+  , tau_decay_NMDA( 100 ) // ms
+  , alpha( 0.5 )          // 1 / ms
+  , conc_Mg2( 1 )         // mM
   , gsl_error_tol( 1e-3 )
 {
 }
@@ -91,11 +92,10 @@ nest::iaf_wang_2002::State_::State_(  const Parameters_& p )
   , ode_state_( nullptr )
   , r_( 0 )
 {
-  // initial values for state variables
   ode_state_ = new double[ G_NMDA_base ];
   assert( ode_state_ );
 
-  ode_state_[ V_m ] = p.E_L;
+  ode_state_[ V_m ] = p.E_L; // initialize to reversal potential
   ode_state_[ G_AMPA ] = 0.0;
   ode_state_[ G_GABA ] = 0.0;
 
@@ -119,9 +119,33 @@ nest::iaf_wang_2002::State_::State_( const State_& s )
   ode_state_[ G_GABA ] = s.ode_state_[ G_GABA ];
 }
 
-// ---------------------------------------------------------------------------
-//   Parameter and state extractions and manipulation functions
-// ---------------------------------------------------------------------------
+nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002 &n )
+  : logger_( n )
+  , spikes_()
+  , s_( 0 )
+  , c_( 0 )
+  , e_( 0 )
+  , step_( Time::get_resolution().get_ms() )
+  , integration_step_( step_ )
+{
+  // Initialization of the remaining members is deferred to init_buffers_().
+}
+
+nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_ &, iaf_wang_2002 &n )
+  : logger_( n )
+  , spikes_()
+  , s_( 0 )
+  , c_( 0 )
+  , e_( 0 )
+  , step_( Time::get_resolution().get_ms() )
+  , integration_step_( step_ )
+{
+  // Initialization of the remaining members is deferred to init_buffers_().
+}
+
+/* ---------------------------------------------------------------------------
+ * Parameter and state extractions and manipulation functions
+ * --------------------------------------------------------------------------- */
 
 void
 nest::iaf_wang_2002::Parameters_::get( DictionaryDatum& d ) const
@@ -224,34 +248,9 @@ nest::iaf_wang_2002::State_::set( const DictionaryDatum& d, const Parameters_&, 
   updateValueParam< double >( d, "G_GABA", ode_state_[ G_GABA ], node );
 }
 
-
-nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002 &n )
-  : logger_( n )
-  , spikes_()
-  , s_( 0 )
-  , c_( 0 )
-  , e_( 0 )
-  , step_( Time::get_resolution().get_ms() )
-  , integration_step_( step_ )
-{
-  // Initialization of the remaining members is deferred to init_buffers_().
-}
-
-nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_ &, iaf_wang_2002 &n )
-  : logger_( n )
-  , spikes_()
-  , s_( 0 )
-  , c_( 0 )
-  , e_( 0 )
-  , step_( Time::get_resolution().get_ms() )
-  , integration_step_( step_ )
-{
-  // Initialization of the remaining members is deferred to init_buffers_().
-}
-
-// ---------------------------------------------------------------------------
-//   Default constructor for node
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Default constructor for node
+ * --------------------------------------------------------------------------- */
 
 nest::iaf_wang_2002::iaf_wang_2002()
   :ArchivingNode()
@@ -264,9 +263,9 @@ nest::iaf_wang_2002::iaf_wang_2002()
   calibrate();
 }
 
-// ---------------------------------------------------------------------------
-//   Copy constructor for node
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Copy constructor for node
+ * --------------------------------------------------------------------------- */
 
 nest::iaf_wang_2002::iaf_wang_2002( const iaf_wang_2002& n_ )
   : ArchivingNode( n_ )
@@ -276,9 +275,9 @@ nest::iaf_wang_2002::iaf_wang_2002( const iaf_wang_2002& n_ )
 {
 }
 
-// ---------------------------------------------------------------------------
-//   Destructor for node
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Destructor for node
+ * --------------------------------------------------------------------------- */
 
 nest::iaf_wang_2002::~iaf_wang_2002()
 {
@@ -305,9 +304,9 @@ nest::iaf_wang_2002::~iaf_wang_2002()
   }
 }
 
-// ---------------------------------------------------------------------------
-//   Node initialization functions
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Node initialization functions
+ * --------------------------------------------------------------------------- */
 
 void
 nest::iaf_wang_2002::init_state_( const Node& proto )
@@ -339,7 +338,7 @@ nest::iaf_wang_2002::init_buffers_()
 
   for ( auto& sb : B_.spikes_ )
   {
-    sb.clear();
+    sb.clear(); // includes resize
   }
 
   B_.logger_.reset(); // includes resize
@@ -386,12 +385,12 @@ nest::iaf_wang_2002::calibrate()
   B_.logger_.init();
 
   // internals V_
-  V_.RefractoryCounts =nest::Time(nest::Time::ms((double) (P_.t_ref))).get_steps();
+  V_.RefractoryCounts = nest::Time( nest::Time::ms( ( double ) ( P_.t_ref ) ) ).get_steps();
 }
 
-// ---------------------------------------------------------------------------
-//   Update and spike handling functions
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * Update and spike handling functions
+ * --------------------------------------------------------------------------- */
 
 extern "C" inline int
 nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void* pnode)
@@ -410,7 +409,8 @@ nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void*
 
   const double I_rec_GABA = ( ode_state[ State_::V_m ] - node.P_.E_in ) * ode_state[ State_::G_GABA ];
 
-  double total_NMDA = 0; //summen over NMDA_G i state
+  // The sum of NMDA_G
+  double total_NMDA = 0;
   for( size_t i = State_::G_NMDA_base + 1; i < node.S_.state_vec_size; i+=2 )
   {
     total_NMDA += ode_state[ i ];
@@ -470,6 +470,7 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
       }
     }
 
+    // add incoming spikes
     S_.ode_state_[ State_::G_AMPA ] += B_.spikes_[ AMPA - 1 ].get_value( lag );
     S_.ode_state_[ State_::G_GABA ] += B_.spikes_[ GABA - 1 ].get_value( lag );
 
@@ -484,11 +485,11 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
     }
 
     // absolute refractory period
-    if ( S_.r_ != 0 )
+    if ( S_.r_ )
     {
       // neuron is absolute refractory
       --S_.r_;
-      S_.ode_state_[ State_::V_m ] = P_.V_reset;
+      S_.ode_state_[ State_::V_m ] = P_.V_reset; // clamp potential
     }
     else if ( S_.ode_state_[ State_::V_m ] >= P_.V_th )
     {
@@ -496,6 +497,7 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
       S_.r_ = V_.RefractoryCounts;
       S_.ode_state_[ State_::V_m ] = P_.V_reset;
 
+      // log spike with ArchivingNode
       set_spiketime( nest::Time::step( origin.get_steps() + lag + 1 ) );
 
       nest::SpikeEvent se;

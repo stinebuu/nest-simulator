@@ -28,7 +28,7 @@
 #error "The GSL library is required for neurons that require a numerical solver."
 #endif
 
-// External includes:
+// C includes:
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
@@ -40,9 +40,6 @@
 #include "nest_types.h"
 #include "ring_buffer.h"
 #include "universal_data_logger.h"
-
-// C++ includes
-#include <valarray>
 
 namespace nest
 {
@@ -59,17 +56,65 @@ namespace nest
 extern "C" inline int iaf_wang_2002_dynamics( double, const double y[], double f[], void* pnode );
 
 
-/* BeginDocumentation
-  Name: iaf_wang_2002.
+/* BeginUserDocs: neuron, integrate-and-fire
 
-  Description:
+Short description
++++++++++++++++++
+
+..
+
+Description
++++++++++++
+
+...
+
+Parameters
+++++++++++
+
+The following parameters can be set in the status dictionary.
+
+=============== ======= ===========================================================
+ E_L            mV      Resting Potential
+ E_ex           mV      Excitatory resting Potential
+ E_in           mV      Inhibitory resting Potential
+ V_th           mV      Threshold Potential
+ V_reset        mV      Reset Potential
+ C_m            pF      Membrane Capacitance
+ g_L            nS      Leak Conductance
+ t_ref          ms      Refractory period
+ tau_AMPA       ms      Synaptic Time Constant AMPA Synapse in ms
+ tau_GABA       ms      Synaptic Time Constant GABA Synapse in ms
+ tau_rise_NMDA  ms      Synaptic Rise Time Constant NMDA Synapse in ms
+ tau_decay_NMDA ms      Synaptic Decay Time Constant NMDA Synapse in ms
+ alpha          1/ms
+ conc_Mg2       mM      Extracellular Magnesium Concentration in mM
+ gsl_error_tol          GSL Error Tolerance
+ ============== ======= ===========================================================
+
+Sends
++++++
+
+SpikeEvent
+
+Receives
+++++++++
+
+SpikeEvent, DataLoggingRequest
 
 
 
-  Sends: SpikeEvent
+References
+++++++++++
 
-  Receives: Spike,  DataLoggingRequest
-*/
+..
+
+See also
+++++++++
+
+iaf_cond_exp, iaf_cond_alpha_mc
+
+EndUserDocs */
+
 class iaf_wang_2002 : public ArchivingNode
 {
 public:
@@ -80,9 +125,9 @@ public:
 
   /**
    * The copy constructor is used to create model copies and instances of the model.
-   * @node The copy constructor needs to initialize the parameters and the state.
-   *       Initialization of buffers and interal variables is deferred to
-   *       @c init_buffers_() and @c calibrate().
+   * @note The copy constructor needs to initialize the parameters and part of the state.
+   *       Initialization of rest of state, buffers and internal variables is deferred to
+   *       @c init_state_(), @c init_buffers_() and @c calibrate().
   **/
   iaf_wang_2002(const iaf_wang_2002 &);
 
@@ -91,11 +136,11 @@ public:
   **/
   ~iaf_wang_2002();
 
-  // -------------------------------------------------------------------------
-  //   Import sets of overloaded virtual functions.
-  //   See: Technical Issues / Virtual Functions: Overriding, Overloading,
-  //        and Hiding
-  // -------------------------------------------------------------------------
+  /*
+   * Import all overloaded virtual functions that we
+   * override in this class.  For background information,
+   * see http://www.gotw.ca/gotw/005.htm.
+   */
 
   using Node::handles_test_event;
   using Node::handle;
@@ -105,21 +150,20 @@ public:
   **/
   port send_test_event( Node& target, rport receptor_type, synindex, bool );
 
-  // -------------------------------------------------------------------------
-  //   Functions handling incoming events.
-  //   We tell NEST that we can handle incoming events of various types by
-  //   defining handle() for the given event.
-  // -------------------------------------------------------------------------
-
+  /* -------------------------------------------------------------------------
+   * Functions handling incoming events.
+   * We tell NEST that we can handle incoming events of various types by
+   * defining handle() for the given event.
+   * ------------------------------------------------------------------------- */
 
   void handle( SpikeEvent & );        //! accept spikes
   void handle( DataLoggingRequest & );//! allow recording with multimeter
   port handles_test_event( SpikeEvent&, port );
   port handles_test_event( DataLoggingRequest&, port );
 
-  // -------------------------------------------------------------------------
-  //   Functions for getting/setting parameters and state values.
-  // -------------------------------------------------------------------------
+  /* -------------------------------------------------------------------------
+   * Functions for getting/setting parameters and state values.
+   * ------------------------------------------------------------------------- */
 
   void get_status(DictionaryDatum &) const;
   void set_status(const DictionaryDatum &);
@@ -127,8 +171,6 @@ public:
 private:
   /**
    * Synapse types to connect to
-   * @note Excluded upper and lower bounds are defined as INF_, SUP_.
-   *       Excluding port 0 avoids accidental connections.
   **/
   enum SynapseTypes
   {
@@ -139,67 +181,42 @@ private:
     SUP_SPIKE_RECEPTOR
   };
 
-  /**
-   * Reset state of neuron.
-  **/
   void init_state_( const Node& proto );
-
-  /**
-   * Reset internal buffers of neuron.
-  **/
   void init_buffers_();
-
-  /**
-   * Initialize auxiliary quantities, leave parameters and state untouched.
-  **/
   void calibrate();
-
-  /**
-   * Take neuron through given time interval
-  **/
   void update( Time const &, const long, const long );
 
   // The next two classes need to be friends to access the State_ class/member
   friend class RecordablesMap< iaf_wang_2002 >;
   friend class UniversalDataLogger< iaf_wang_2002 >;
 
+  // Parameters class --------------------------------------------------------------
+
   /**
-   * Free parameters of the neuron.
+   * Parameters of the neuron.
    *
    * These are the parameters that can be set by the user through @c `node.set()`.
    * They are initialized from the model prototype when the node is created.
-   * Parameters do not change during calls to @c update() and are not reset by
-   * @c ResetNetwork.
-   *
-   * @note Parameters_ need neither copy constructor nor @c operator=(), since
-   *       all its members are copied properly by the default copy constructor
-   *       and assignment operator. Important:
-   *       - If Parameters_ contained @c Time members, you need to define the
-   *         assignment operator to recalibrate all members of type @c Time . You
-   *         may also want to define the assignment operator.
-   *       - If Parameters_ contained members that cannot copy themselves, such
-   *         as C-style arrays, you need to define the copy constructor and
-   *         assignment operator to copy those members.
+   * Parameters do not change during calls to @c update().
   **/
   struct Parameters_
   {
-    double E_L;     //! Resting Potential
-    double E_ex;    //! Excitatory resting Potential
-    double E_in;    //! Inhibitory resting Potential
-    double V_th;    //! Threshold Potential
-    double V_reset; //! Reset Potential
-    double C_m;     //! Membrane Capacitance
-    double g_L;     //! Leak Conductance
-    double t_ref;   //! Refractory period
-    double tau_AMPA;
-    double tau_GABA;
-    double tau_rise_NMDA;
-    double tau_decay_NMDA;
-    double alpha;
-    //!  can be wrong, should be mM
-    double conc_Mg2;
+    double E_L;            //!< Resting Potential in mV
+    double E_ex;           //!< Excitatory resting Potential in mV
+    double E_in;           //!< Inhibitory resting Potential in mV
+    double V_th;           //!< Threshold Potential in mV
+    double V_reset;        //!< Reset Potential in mV
+    double C_m;            //!< Membrane Capacitance in pF
+    double g_L;            //!< Leak Conductance in nS
+    double t_ref;          //!< Refractory period in ms
+    double tau_AMPA;       //!< Synaptic Time Constant AMPA Synapse in ms
+    double tau_GABA;       //!< Synaptic Time Constant GABA Synapse in ms
+    double tau_rise_NMDA;  //!< Synaptic Rise Time Constant NMDA Synapse in ms
+    double tau_decay_NMDA; //!< Synaptic Decay Time Constant NMDA Synapse in ms
+    double alpha;          //!<  in 1/ms
+    double conc_Mg2;       //!< Extracellular Magnesium Concentration in mM
 
-    double gsl_error_tol;
+    double gsl_error_tol;  //!< GSL Error Tolerance
 
     /**
      * Initialize parameters to their default values.
@@ -210,24 +227,18 @@ private:
     void set( const DictionaryDatum&, Node* node ); //!< Set values from dictionary
   };
 
+
+  // State variables class --------------------------------------------
+
   /**
-   * Dynamic state of the neuron.
+   * State variables of the model.
    *
-   * These are the state variables that are advanced in time by calls to
-   * @c update(). In many models, some or all of them can be set by the user
-   * through @c `node.set()`. The state variables are initialized from the model
-   * prototype when the node is created. State variables are reset by @c ResetNetwork.
+   * State variables consist of the state vector for the subthreshold
+   * dynamics and the refractory count. The state vector must be a
+   * C-style array to be compatible with GSL ODE solvers.
    *
-   * @note State_ need neither copy constructor nor @c operator=(), since
-   *       all its members are copied properly by the default copy constructor
-   *       and assignment operator. Important:
-   *       - If State_ contained @c Time members, you need to define the
-   *         assignment operator to recalibrate all members of type @c Time . You
-   *         may also want to define the assignment operator.
-   *       - If State_ contained members that cannot copy themselves, such
-   *         as C-style arrays, you need to define the copy constructor and
-   *         assignment operator to copy those members.
-  **/
+   * @note Copy constructor is required because of the C-style array.
+   */
   struct State_
   {
     //! Symbolic indices to the elements of the state vector y
@@ -236,7 +247,7 @@ private:
       V_m = 0,
       G_AMPA,
       G_GABA,
-      G_NMDA_base, // (x,g), (x,g), (x,g), ...
+      G_NMDA_base, // (x_NMDA_1, G_NMDA_1), (x_NMDA_2, G_NMDA_2), (x_NMDA_3, G_NMDA_3), ..., (x_NMDA_j, G_NMDA_j)
     };
 
     size_t state_vec_size;
@@ -254,32 +265,26 @@ private:
     void set( const DictionaryDatum&, const Parameters_&, Node* );
   };
 
+  // Variables class -------------------------------------------------------
+
   /**
-   * Internal variables of the neuron.
-   *
-   * These variables must be initialized by @c calibrate, which is called before
-   * the first call to @c update() upon each call to @c Simulate.
-   * @node Variables_ needs neither constructor, copy constructor or assignment operator,
-   *       since it is initialized by @c calibrate(). If Variables_ has members that
-   *       cannot destroy themselves, Variables_ will need a destructor.
-  **/
+   * Internal variables of the model.
+   * Variables are re-initialized upon each call to Simulate.
+   */
   struct Variables_
   {
-    //!  refractory time in steps
+    //! refractory time in steps
     long RefractoryCounts;
   };
 
+  // Buffers class --------------------------------------------------------
+
   /**
-   * Buffers of the neuron.
-   *
-   * Usually buffers for incoming spikes and data logged for analog recorders.
-   * Buffers must be initialized by @c init_buffers_(), which is called before
-   * @c calibrate() on the first call to @c Simulate after the start of NEST,
-   * ResetKernel or ResetNetwork.
-   * @node Buffers_ needs neither constructor, copy constructor or assignment operator,
-   *       since it is initialized by @c init_nodes_(). If Buffers_ has members that
-   *       cannot destroy themselves, Buffers_ will need a destructor.
-  **/
+   * Buffers of the model.
+   * Buffers are on par with state variables in terms of persistence,
+   * i.e., initialized only upon first Simulate call after ResetKernel,
+   * but its implementation details hidden from the user.
+   */
   struct Buffers_
   {
     Buffers_( iaf_wang_2002 & );
@@ -322,16 +327,9 @@ private:
     return S_.ode_state_[ elem ];
   }
 
-  // -------------------------------------------------------------------------
-  //   Member variables of neuron model.
-  //   Each model neuron should have precisely the following four data members,
-  //   which are one instance each of the parameters, state, buffers and variables
-  //   structures. Experience indicates that the state and variables member should
-  //   be next to each other to achieve good efficiency (caching).
-  //   Note: Devices require one additional data member, an instance of the
-  //   ``Device`` child class they belong to.
-  // -------------------------------------------------------------------------
+  // Data members -----------------------------------------------------------
 
+  // keep the order of these lines, seems to give best performance
   Parameters_ P_;  //!< Free parameters.
   State_      S_;  //!< Dynamic state.
   Variables_  V_;  //!< Internal Variables
