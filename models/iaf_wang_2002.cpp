@@ -1,5 +1,5 @@
 /*
- *  wang.cpp
+ *  iaf_wang_2002.cpp
  *
  *  This file is part of NEST.
  *
@@ -20,9 +20,8 @@
  *
 **/
 
-#include "wang.h"
+#include "iaf_wang_2002.h"
 
-// C++ includes:
 #include <limits>
 
 // Includes from libnestutil:
@@ -45,29 +44,29 @@
 // ---------------------------------------------------------------------------
 //   Recordables map
 // ---------------------------------------------------------------------------
-nest::RecordablesMap< nest::wang > nest::wang::recordablesMap_;
+nest::RecordablesMap< nest::iaf_wang_2002 > nest::iaf_wang_2002::recordablesMap_;
 
 namespace nest
 {
   // Override the create() method with one call to RecordablesMap::insert_()
   // for each quantity to be recorded.
-  template <> void RecordablesMap< wang >::create()
+  template <> void RecordablesMap< iaf_wang_2002 >::create()
   {
     // add state variables to recordables map
-    insert_( names::V_m, &wang::get_ode_state_elem_< wang::State_::V_m > );
+    insert_( names::V_m, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::V_m > );
 
-    //TODO SHOULD THESE BE NAMES???
+    //TODO SHOULD THESE BE NAMES?
 
-    insert_( "G_AMPA", &wang::get_ode_state_elem_< wang::State_::G_AMPA > );
-    insert_( "G_GABA", &wang::get_ode_state_elem_< wang::State_::G_GABA > );
-    //insert_( "G_NMDA", &wang::get_ode_state_elem_< wang::State_::G_NMDA > );
+    insert_( "G_AMPA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
+    insert_( "G_GABA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
+    //insert_( "G_NMDA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_NMDA > );
   }
 }
 // ---------------------------------------------------------------------------
 //  Default constructors defining default parameters and state
 // ---------------------------------------------------------------------------
 
-nest::wang::Parameters_::Parameters_()
+nest::iaf_wang_2002::Parameters_::Parameters_()
   : E_L( -70.0 )          // mV
   , E_ex( 0.0 )           // as mV
   , E_in(-70.0)           // as mV
@@ -86,7 +85,7 @@ nest::wang::Parameters_::Parameters_()
 {
 }
 
-nest::wang::State_::State_(  const Parameters_& p )
+nest::iaf_wang_2002::State_::State_(  const Parameters_& p )
   : state_vec_size ( 0 )
   , num_ports_( 2 )
   , ode_state_( nullptr )
@@ -103,7 +102,7 @@ nest::wang::State_::State_(  const Parameters_& p )
   state_vec_size = G_NMDA_base;
 }
 
-nest::wang::State_::State_( const State_& s )
+nest::iaf_wang_2002::State_::State_( const State_& s )
   : state_vec_size ( s.state_vec_size )
   , num_ports_( s.num_ports_ )
   , ode_state_( nullptr )
@@ -120,23 +119,12 @@ nest::wang::State_::State_( const State_& s )
   ode_state_[ G_GABA ] = s.ode_state_[ G_GABA ];
 }
 
-nest::wang::State_& nest::wang::State_::operator=( const State_& s )
-{
-  assert( false );
-  assert( this != &s ); // would be bad logical error in program
-  assert( s.ode_state_ == nullptr );
-  assert( s.num_ports_ == 2 );
-
-  r_ = s.r_;
-  return *this;
-}
-
 // ---------------------------------------------------------------------------
 //   Parameter and state extractions and manipulation functions
 // ---------------------------------------------------------------------------
 
 void
-nest::wang::Parameters_::get( DictionaryDatum& d ) const
+nest::iaf_wang_2002::Parameters_::get( DictionaryDatum& d ) const
 {
   def< double >( d, names::E_L, E_L );
   def< double >( d, names::E_ex, E_ex );
@@ -156,7 +144,7 @@ nest::wang::Parameters_::get( DictionaryDatum& d ) const
 }
 
 void
-nest::wang::Parameters_::set( const DictionaryDatum& d, Node* node )
+nest::iaf_wang_2002::Parameters_::set( const DictionaryDatum& d, Node* node )
 {
   // allow setting the membrane potential
   updateValueParam< double >( d, names::V_th, V_th, node );
@@ -210,17 +198,26 @@ nest::wang::Parameters_::set( const DictionaryDatum& d, Node* node )
 }
 
 void
-nest::wang::State_::get( DictionaryDatum& d ) const
+nest::iaf_wang_2002::State_::get( DictionaryDatum& d ) const
 {
   //TODO: SHOULD THESE BE NAMES????
   def< double >( d, names::V_m, ode_state_[ V_m ] ); // Membrane potential
   def< double >( d, "G_AMPA", ode_state_[ G_AMPA ] );
   def< double >( d, "G_GABA", ode_state_[ G_GABA ] );
-  // total summen av NMDA
+
+  // total NMDA sum
+  double sum_NMDA = 0.0;
+  for( size_t i = G_NMDA_base; i < state_vec_size; i+=2 )
+  {
+    sum_NMDA += ode_state_[ i + 1];
+  }
+  def < double >( d, "sum_NMDA", sum_NMDA );
+
+  def < double >( d, "state_vec_size", state_vec_size ); // for debugging
 }
 
 void
-nest::wang::State_::set( const DictionaryDatum& d, const Parameters_&, Node* node )
+nest::iaf_wang_2002::State_::set( const DictionaryDatum& d, const Parameters_&, Node* node )
 {
   updateValueParam< double >( d, names::V_m, ode_state_[ V_m ], node );
   updateValueParam< double >( d, "G_AMPA", ode_state_[ G_AMPA ], node );
@@ -228,7 +225,7 @@ nest::wang::State_::set( const DictionaryDatum& d, const Parameters_&, Node* nod
 }
 
 
-nest::wang::Buffers_::Buffers_( wang &n )
+nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002 &n )
   : logger_( n )
   , spikes_()
   , s_( 0 )
@@ -240,7 +237,7 @@ nest::wang::Buffers_::Buffers_( wang &n )
   // Initialization of the remaining members is deferred to init_buffers_().
 }
 
-nest::wang::Buffers_::Buffers_( const Buffers_ &, wang &n )
+nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_ &, iaf_wang_2002 &n )
   : logger_( n )
   , spikes_()
   , s_( 0 )
@@ -256,7 +253,7 @@ nest::wang::Buffers_::Buffers_( const Buffers_ &, wang &n )
 //   Default constructor for node
 // ---------------------------------------------------------------------------
 
-nest::wang::wang()
+nest::iaf_wang_2002::iaf_wang_2002()
   :ArchivingNode()
   , P_()
   , S_( P_ )
@@ -271,7 +268,7 @@ nest::wang::wang()
 //   Copy constructor for node
 // ---------------------------------------------------------------------------
 
-nest::wang::wang( const wang& n_ )
+nest::iaf_wang_2002::iaf_wang_2002( const iaf_wang_2002& n_ )
   : ArchivingNode( n_ )
   , P_( n_.P_ )
   , S_( n_.S_ )
@@ -283,7 +280,7 @@ nest::wang::wang( const wang& n_ )
 //   Destructor for node
 // ---------------------------------------------------------------------------
 
-nest::wang::~wang()
+nest::iaf_wang_2002::~iaf_wang_2002()
 {
   // GSL structs may not have been allocated, so we need to protect destruction
 
@@ -313,11 +310,8 @@ nest::wang::~wang()
 // ---------------------------------------------------------------------------
 
 void
-nest::wang::init_state_( const Node& proto )
+nest::iaf_wang_2002::init_state_( const Node& proto )
 {
-  const wang& pr = downcast< wang >( proto );
-  S_ = pr.S_;
-
   assert( S_.state_vec_size == State_::G_NMDA_base );
 
   double* old_state = S_.ode_state_;
@@ -339,7 +333,7 @@ nest::wang::init_state_( const Node& proto )
 }
 
 void
-nest::wang::init_buffers_()
+nest::iaf_wang_2002::init_buffers_()
 {
   B_.spikes_.resize( S_.num_ports_ );
 
@@ -378,7 +372,7 @@ nest::wang::init_buffers_()
     gsl_odeiv_evolve_reset( B_.e_ );
   }
 
-  B_.sys_.function = wang_dynamics;
+  B_.sys_.function = iaf_wang_2002_dynamics;
   B_.sys_.jacobian = NULL;
   B_.sys_.dimension = S_.state_vec_size;
   B_.sys_.params = reinterpret_cast< void* >( this );
@@ -387,7 +381,7 @@ nest::wang::init_buffers_()
 }
 
 void
-nest::wang::calibrate()
+nest::iaf_wang_2002::calibrate()
 {
   B_.logger_.init();
 
@@ -400,14 +394,14 @@ nest::wang::calibrate()
 // ---------------------------------------------------------------------------
 
 extern "C" inline int
-nest::wang_dynamics(double, const double ode_state[], double f[], void* pnode)
+nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void* pnode)
 {
   // a shorthand
-  typedef nest::wang::State_ State_;
+  typedef nest::iaf_wang_2002::State_ State_;
 
   // get access to node so we can almost work as in a member function
   assert( pnode );
-  const nest::wang& node = *( reinterpret_cast< nest::wang* >( pnode ) );
+  const nest::iaf_wang_2002& node = *( reinterpret_cast< nest::iaf_wang_2002* >( pnode ) );
 
   // ode_state[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.ode_state[].
@@ -441,7 +435,7 @@ nest::wang_dynamics(double, const double ode_state[], double f[], void* pnode)
 }
 
 void
-nest::wang::update(nest::Time const & origin,const long from, const long to)
+nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const long to)
 {
   for ( long lag = from ; lag < to ; ++lag )
   {
@@ -517,13 +511,13 @@ nest::wang::update(nest::Time const & origin,const long from, const long to)
 // Do not move this function as inline to h-file. It depends on
 // universal_data_logger_impl.h being included here.
 void
-nest::wang::handle( nest::DataLoggingRequest& e )
+nest::iaf_wang_2002::handle( nest::DataLoggingRequest& e )
 {
   B_.logger_.handle( e );
 }
 
 void
-nest::wang::handle( nest::SpikeEvent &e )
+nest::iaf_wang_2002::handle( nest::SpikeEvent &e )
 {
   assert( e.get_delay_steps() > 0 );
   assert( e.get_rport() < static_cast< int >( B_.spikes_.size() ) );

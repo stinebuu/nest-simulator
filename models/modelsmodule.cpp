@@ -72,6 +72,7 @@
 #include "iaf_psc_exp_multisynapse.h"
 #include "iaf_psc_exp_ps.h"
 #include "iaf_psc_exp_ps_lossless.h"
+#include "iaf_wang_2002.h"
 #include "izhikevich.h"
 #include "lin_rate.h"
 #include "mat2_psc_exp.h"
@@ -86,7 +87,6 @@
 #include "sigmoid_rate_gg_1998.h"
 #include "tanh_rate.h"
 #include "threshold_lin_rate.h"
-#include "wang.h"
 
 // Stimulation devices
 #include "ac_generator.h"
@@ -272,6 +272,7 @@ ModelsModule::init( SLIInterpreter* )
   kernel().model_manager.register_node_model< iaf_cond_exp >( "iaf_cond_exp" );
   kernel().model_manager.register_node_model< iaf_cond_exp_sfa_rr >( "iaf_cond_exp_sfa_rr" );
   kernel().model_manager.register_node_model< iaf_cond_alpha_mc >( "iaf_cond_alpha_mc" );
+  kernel().model_manager.register_node_model< iaf_wang_2002 >( "iaf_wang_2002" );
   kernel().model_manager.register_node_model< hh_cond_beta_gap_traub >( "hh_cond_beta_gap_traub" );
   kernel().model_manager.register_node_model< hh_psc_alpha >( "hh_psc_alpha" );
   kernel().model_manager.register_node_model< hh_psc_alpha_clopath >( "hh_psc_alpha_clopath" );
@@ -294,7 +295,6 @@ ModelsModule::init( SLIInterpreter* )
   kernel().model_manager.register_node_model< aeif_cond_alpha_multisynapse >( "aeif_cond_alpha_multisynapse" );
   kernel().model_manager.register_node_model< siegert_neuron >( "siegert_neuron" );
   kernel().model_manager.register_node_model< pp_cond_exp_mc_urbanczik >( "pp_cond_exp_mc_urbanczik" );
-  kernel().model_manager.register_node_model< wang >( "wang" );
 #endif
 
 #ifdef HAVE_MUSIC

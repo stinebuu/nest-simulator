@@ -74,6 +74,7 @@ set( models_sources
     iaf_psc_exp_multisynapse.h iaf_psc_exp_multisynapse.cpp
     iaf_psc_exp_ps.cpp iaf_psc_exp_ps.h
     iaf_psc_exp_ps_lossless.cpp iaf_psc_exp_ps_lossless.h
+    iaf_wang_2002.h iaf_wang_2002.cpp
     izhikevich.h izhikevich.cpp
     jonke_synapse.h
     lin_rate.h lin_rate.cpp
@@ -137,7 +138,6 @@ set( models_sources
     vogels_sprekeler_synapse.h
     weight_recorder.h weight_recorder.cpp
     spike_dilutor.h spike_dilutor.cpp
-    wang.h wang.cpp
     )
 
 add_library( models ${models_sources} )

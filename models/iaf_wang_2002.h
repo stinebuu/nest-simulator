@@ -1,5 +1,5 @@
 /**
- *  wang.h
+ *  iaf_wang_2002.h
  *
  *  This file is part of NEST.
  *
@@ -19,8 +19,8 @@
  *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
  *
 **/
-#ifndef WANG
-#define WANG
+#ifndef IAF_WANG_2002
+#define IAF_WANG_2002
 
 #include "config.h"
 
@@ -56,49 +56,27 @@ namespace nest
  *       through a function pointer.
  * @param void* Pointer to model neuron instance.
 **/
-extern "C" inline int wang_dynamics( double, const double y[], double f[], void* pnode );
+extern "C" inline int iaf_wang_2002_dynamics( double, const double y[], double f[], void* pnode );
 
 
 /* BeginDocumentation
-  Name: wang.
+  Name: iaf_wang_2002.
 
   Description:
 
-
-
-  Parameters:
-  The following parameters can be set in the status dictionary.
-E_L [mV]  Resting Potential
-V_th [mV]  Threshold Potential
-V_reset [mV]  Reset Potential
-C_m [nF]  Membrane Capacitance
-g_L [nS]  Leak Conductance
-t_ref [ms]  Refractory period
-conc_Mg2 [real]  can be wrong, should be mM
-w [real]  This is wrong
- E_ex mV = 0 mV         # Excitatory reversal Potential
- E_in mV = -85.0 mV     # Inhibitory reversal Potential
- E_L mV = -70.0 mV      # Leak reversal Potential (aka resting potential)
- tau_syn_ex ms = 0.2 ms # Synaptic Time Constant Excitatory Synapse
- tau_syn_in ms = 2.0 ms # Synaptic Time Constant for Inhibitory Synapse
-
-
-  Dynamic state variables:
-r [integer]  counts number of tick during the refractory period
-V_m [mV]  membrane potential
 
 
   Sends: SpikeEvent
 
   Receives: Spike,  DataLoggingRequest
 */
-class wang : public ArchivingNode
+class iaf_wang_2002 : public ArchivingNode
 {
 public:
   /**
    * The constructor is only used to create the model prototype in the model manager.
   **/
-  wang();
+  iaf_wang_2002();
 
   /**
    * The copy constructor is used to create model copies and instances of the model.
@@ -106,12 +84,12 @@ public:
    *       Initialization of buffers and interal variables is deferred to
    *       @c init_buffers_() and @c calibrate().
   **/
-  wang(const wang &);
+  iaf_wang_2002(const iaf_wang_2002 &);
 
   /**
    * Destructor.
   **/
-  ~wang();
+  ~iaf_wang_2002();
 
   // -------------------------------------------------------------------------
   //   Import sets of overloaded virtual functions.
@@ -182,8 +160,8 @@ private:
   void update( Time const &, const long, const long );
 
   // The next two classes need to be friends to access the State_ class/member
-  friend class RecordablesMap< wang >;
-  friend class UniversalDataLogger< wang >;
+  friend class RecordablesMap< iaf_wang_2002 >;
+  friend class UniversalDataLogger< iaf_wang_2002 >;
 
   /**
    * Free parameters of the neuron.
@@ -271,7 +249,6 @@ private:
 
     State_( const Parameters_& ); //!< Default initialization
     State_( const State_& );
-    State_& operator=( const State_& );
 
     void get( DictionaryDatum& ) const;
     void set( const DictionaryDatum&, const Parameters_&, Node* );
@@ -305,13 +282,13 @@ private:
   **/
   struct Buffers_
   {
-    Buffers_( wang & );
-    Buffers_( const Buffers_ &, wang & );
+    Buffers_( iaf_wang_2002 & );
+    Buffers_( const Buffers_ &, iaf_wang_2002 & );
 
     /**
      * Logger for all analog data
     **/
-    UniversalDataLogger< wang > logger_;
+    UniversalDataLogger< iaf_wang_2002 > logger_;
 
     // -----------------------------------------------------------------------
     //   Buffers and sums of incoming spikes per timestep
@@ -361,13 +338,13 @@ private:
   Buffers_    B_;  //!< Buffers.
 
   //! Mapping of recordables names to access functions
-  static RecordablesMap< wang > recordablesMap_;
-  friend int wang_dynamics( double, const double y[], double f[], void* pnode );
+  static RecordablesMap< iaf_wang_2002 > recordablesMap_;
+  friend int iaf_wang_2002_dynamics( double, const double y[], double f[], void* pnode );
 
-}; /* neuron wang */
+}; /* neuron iaf_wang_2002 */
 
 inline port
-wang::send_test_event( Node& target, rport receptor_type, synindex, bool )
+iaf_wang_2002::send_test_event( Node& target, rport receptor_type, synindex, bool )
 {
   SpikeEvent e;
   e.set_sender( *this );
@@ -375,7 +352,7 @@ wang::send_test_event( Node& target, rport receptor_type, synindex, bool )
 }
 
 inline port
-wang::handles_test_event( SpikeEvent&, port receptor_type )
+iaf_wang_2002::handles_test_event( SpikeEvent&, port receptor_type )
 {
   if ( !( INF_SPIKE_RECEPTOR < receptor_type && receptor_type < SUP_SPIKE_RECEPTOR ) )
   {
@@ -393,7 +370,7 @@ wang::handles_test_event( SpikeEvent&, port receptor_type )
 }
 
 inline port
-wang::handles_test_event( DataLoggingRequest& dlr, port receptor_type )
+iaf_wang_2002::handles_test_event( DataLoggingRequest& dlr, port receptor_type )
 {
   // You should usually not change the code in this function.
   // It confirms to the connection management system that we are able
@@ -409,7 +386,7 @@ wang::handles_test_event( DataLoggingRequest& dlr, port receptor_type )
 }
 
 inline void
-wang::get_status( DictionaryDatum & d ) const
+iaf_wang_2002::get_status( DictionaryDatum & d ) const
 {
   P_.get( d );
   S_.get( d );
@@ -427,7 +404,7 @@ wang::get_status( DictionaryDatum & d ) const
 }
 
 inline void
-wang::set_status( const DictionaryDatum & d )
+iaf_wang_2002::set_status( const DictionaryDatum & d )
 {
   Parameters_ ptmp = P_;     // temporary copy in case of errors
   ptmp.set( d, this );       // throws if BadProperty
@@ -446,4 +423,4 @@ wang::set_status( const DictionaryDatum & d )
 };
 } // namespace
 
-#endif // WANG
+#endif // IAF_WANG_2002
