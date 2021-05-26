@@ -327,6 +327,17 @@ private:
     return S_.ode_state_[ elem ];
   }
 
+  double
+  get_NMDA_sum_() const
+  {
+    double NMDA_sum = 0.0;
+    for( size_t i = S_.G_NMDA_base; i < S_.state_vec_size; i+=2 )
+    {
+      NMDA_sum += S_.ode_state_[ i + 1 ];
+    }
+    return NMDA_sum;
+  }
+
   // Data members -----------------------------------------------------------
 
   // keep the order of these lines, seems to give best performance

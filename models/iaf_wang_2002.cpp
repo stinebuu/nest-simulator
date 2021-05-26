@@ -56,11 +56,9 @@ namespace nest
   {
     // add state variables to recordables map
     insert_( names::V_m, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::V_m > );
-
-    //TODO SHOULD THESE BE NAMES?
-
-    insert_( "G_AMPA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
-    insert_( "G_GABA", &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
+    insert_( names::g_AMPA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
+    insert_( names::g_GABA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
+    insert_( names::NMDA_sum, &iaf_wang_2002::get_NMDA_sum_ );
   }
 }
 /* ---------------------------------------------------------------------------
@@ -224,18 +222,17 @@ nest::iaf_wang_2002::Parameters_::set( const DictionaryDatum& d, Node* node )
 void
 nest::iaf_wang_2002::State_::get( DictionaryDatum& d ) const
 {
-  //TODO: SHOULD THESE BE NAMES????
   def< double >( d, names::V_m, ode_state_[ V_m ] ); // Membrane potential
-  def< double >( d, "G_AMPA", ode_state_[ G_AMPA ] );
-  def< double >( d, "G_GABA", ode_state_[ G_GABA ] );
+  def< double >( d, names::g_AMPA, ode_state_[ G_AMPA ] );
+  def< double >( d, names::g_GABA, ode_state_[ G_GABA ] );
 
   // total NMDA sum
-  double sum_NMDA = 0.0;
+  double NMDA_sum = 0.0;
   for( size_t i = G_NMDA_base; i < state_vec_size; i+=2 )
   {
-    sum_NMDA += ode_state_[ i + 1];
+    NMDA_sum += ode_state_[ i + 1 ];
   }
-  def < double >( d, "sum_NMDA", sum_NMDA );
+  def < double >( d, names::NMDA_sum, NMDA_sum );
 
   def < double >( d, "state_vec_size", state_vec_size ); // for debugging
 }
@@ -244,8 +241,8 @@ void
 nest::iaf_wang_2002::State_::set( const DictionaryDatum& d, const Parameters_&, Node* node )
 {
   updateValueParam< double >( d, names::V_m, ode_state_[ V_m ], node );
-  updateValueParam< double >( d, "G_AMPA", ode_state_[ G_AMPA ], node );
-  updateValueParam< double >( d, "G_GABA", ode_state_[ G_GABA ], node );
+  updateValueParam< double >( d, names::g_AMPA, ode_state_[ G_AMPA ], node );
+  updateValueParam< double >( d, names::g_GABA, ode_state_[ G_GABA ], node );
 }
 
 /* ---------------------------------------------------------------------------
