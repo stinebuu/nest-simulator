@@ -22,6 +22,8 @@
 
 #include "iaf_wang_2002.h"
 
+#ifdef HAVE_GSL
+
 #include <limits>
 
 // Includes from libnestutil:
@@ -522,3 +524,6 @@ nest::iaf_wang_2002::handle( nest::SpikeEvent &e )
 
   B_.spikes_[ e.get_rport() ].add_value( steps, weight );
 }
+
+#endif // HAVE_GSL
+

@@ -24,9 +24,7 @@
 
 #include "config.h"
 
-#ifndef HAVE_GSL
-#error "The GSL library is required for neurons that require a numerical solver."
-#endif
+#ifdef HAVE_GSL
 
 // C includes:
 #include <gsl/gsl_errno.h>
@@ -459,4 +457,5 @@ iaf_wang_2002::set_status( const DictionaryDatum & d )
 };
 } // namespace
 
+#endif // HAVE_GSL
 #endif // IAF_WANG_2002

@@ -96,6 +96,7 @@ M_ERROR setverbosity
                                               /tau_decay [ 1.0 ] >>
                                   /receptor_type 1 >>
    /ht_neuron << /receptor_type 1 >>
+   /iaf_wang_2002 << /receptor_type 1 >>    
    >>
    def
                                      
