@@ -471,7 +471,7 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
 
     for( size_t i = NMDA - 1; i < B_.spikes_.size(); ++i )
     {
-      const int si = i - ( NMDA - 1 );
+      const size_t si = i - ( NMDA - 1 );
 
       assert( si >= 0 );
       assert( State_::G_NMDA_base + si * 2 < S_.state_vec_size );
