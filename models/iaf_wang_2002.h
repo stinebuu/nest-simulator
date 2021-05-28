@@ -61,12 +61,15 @@ extern "C" inline int iaf_wang_2002_dynamics( double, const double y[], double f
 Short description
 +++++++++++++++++
 
-..
+Leaky integrate-and-fire-neuron model with dynamic NMDA receptors.
 
 Description
 +++++++++++
 
-...
+This model implements a version of the neuron model described in [1]_.
+
+It contains AMPA, GABA and NMDA synapses, where the number of NMDA ports are dependent
+on the number of presynaptic connections.
 
 Parameters
 ++++++++++
@@ -91,6 +94,22 @@ The following parameters can be set in the status dictionary.
  gsl_error_tol          GSL Error Tolerance
  ============== ======= ===========================================================
 
+Recordables
++++++++++++
+
+The following values can be recorded.
+
+=========== ===========================================================
+ V_m         Membrane potential
+ g_AMPA      AMPA gate
+ g_GABA      GABA gate
+ NMDA_sum    sum of NMDA over all presynaptic neurons j
+=========== ===========================================================
+
+.. note::
+   It is possible to set values for V_m, g_AMPA and g_GABA when creating the model. The
+   different g_NMDA_j (j represents presynaptic neuron j) can not be set by the user though.
+
 Sends
 +++++
 
@@ -106,12 +125,14 @@ SpikeEvent, DataLoggingRequest
 References
 ++++++++++
 
-..
+.. [1] Wang, X. J. (2002). Probabilistic decision making by slow reverberation in
+       cortical circuits. Neuron, 36(5), 955-968.
+       DOI: https://doi.org/10.1016/S0896-6273(02)01092-9
 
 See also
 ++++++++
 
-iaf_cond_exp, iaf_cond_alpha_mc
+iaf_cond_alpha, ht_neuron
 
 EndUserDocs */
 
