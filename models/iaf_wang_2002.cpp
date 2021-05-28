@@ -227,11 +227,7 @@ nest::iaf_wang_2002::State_::get( DictionaryDatum& d ) const
   def< double >( d, names::g_GABA, ode_state_[ G_GABA ] );
 
   // total NMDA sum
-  double NMDA_sum = 0.0;
-  for( size_t i = G_NMDA_base; i < state_vec_size; i+=2 )
-  {
-    NMDA_sum += ode_state_[ i + 1 ];
-  }
+  double NMDA_sum = get_NMDA_sum();
   def < double >( d, names::NMDA_sum, NMDA_sum );
 
   def < double >( d, "state_vec_size", state_vec_size ); // for debugging
@@ -306,7 +302,7 @@ nest::iaf_wang_2002::~iaf_wang_2002()
  * --------------------------------------------------------------------------- */
 
 void
-nest::iaf_wang_2002::init_state_( const Node& proto )
+nest::iaf_wang_2002::init_state_()
 {
   assert( S_.state_vec_size == State_::G_NMDA_base );
 

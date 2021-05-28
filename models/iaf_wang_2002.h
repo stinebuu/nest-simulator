@@ -202,7 +202,7 @@ private:
     SUP_SPIKE_RECEPTOR
   };
 
-  void init_state_( const Node& proto );
+  void init_state_();
   void init_buffers_();
   void calibrate();
   void update( Time const &, const long, const long );
@@ -284,6 +284,17 @@ private:
 
     void get( DictionaryDatum& ) const;
     void set( const DictionaryDatum&, const Parameters_&, Node* );
+
+    double
+    get_NMDA_sum() const
+    {
+      double NMDA_sum = 0.0;
+      for( size_t i = G_NMDA_base; i < state_vec_size; i+=2 )
+      {
+        NMDA_sum += ode_state_[ i + 1 ];
+      }
+      return NMDA_sum;
+    }
   };
 
   // Variables class -------------------------------------------------------
@@ -351,12 +362,7 @@ private:
   double
   get_NMDA_sum_() const
   {
-    double NMDA_sum = 0.0;
-    for( size_t i = S_.G_NMDA_base; i < S_.state_vec_size; i+=2 )
-    {
-      NMDA_sum += S_.ode_state_[ i + 1 ];
-    }
-    return NMDA_sum;
+    return S_.get_NMDA_sum();
   }
 
   // Data members -----------------------------------------------------------
