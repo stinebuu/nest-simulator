@@ -18,13 +18,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
  *
-**/
+ */
 
 #include "iaf_wang_2002.h"
 
 #ifdef HAVE_GSL
-
-#include <limits>
 
 // Includes from libnestutil:
 #include "dictdatum.h"
@@ -50,18 +48,20 @@ nest::RecordablesMap< nest::iaf_wang_2002 > nest::iaf_wang_2002::recordablesMap_
 
 namespace nest
 {
-  /*
-   * Override the create() method with one call to RecordablesMap::insert_()
-   * for each quantity to be recorded.
-   */
-  template <> void RecordablesMap< iaf_wang_2002 >::create()
-  {
-    // add state variables to recordables map
-    insert_( names::V_m, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::V_m > );
-    insert_( names::g_AMPA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
-    insert_( names::g_GABA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
-    insert_( names::NMDA_sum, &iaf_wang_2002::get_NMDA_sum_ );
-  }
+/*
+ * Override the create() method with one call to RecordablesMap::insert_()
+ * for each quantity to be recorded.
+ */
+template <>
+void
+RecordablesMap< iaf_wang_2002 >::create()
+{
+  // add state variables to recordables map
+  insert_( names::V_m, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::V_m > );
+  insert_( names::g_AMPA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_AMPA > );
+  insert_( names::g_GABA, &iaf_wang_2002::get_ode_state_elem_< iaf_wang_2002::State_::G_GABA > );
+  insert_( names::NMDA_sum, &iaf_wang_2002::get_NMDA_sum_ );
+}
 }
 /* ---------------------------------------------------------------------------
  * Default constructors defining default parameters and state
@@ -70,9 +70,9 @@ namespace nest
 nest::iaf_wang_2002::Parameters_::Parameters_()
   : E_L( -70.0 )          // mV
   , E_ex( 0.0 )           // mV
-  , E_in(-70.0)           // mV
-  , V_th(-50.0)           // mV
-  , V_reset(-55.0)        // mV
+  , E_in( -70.0 )         // mV
+  , V_th( -55.0 )         // mV
+  , V_reset( -60.0 )      // mV
   , C_m( 500.0 )          // pF
   , g_L( 25.0 )           // nS
   , t_ref( 2.0 )          // ms
@@ -86,8 +86,8 @@ nest::iaf_wang_2002::Parameters_::Parameters_()
 {
 }
 
-nest::iaf_wang_2002::State_::State_(  const Parameters_& p )
-  : state_vec_size ( 0 )
+nest::iaf_wang_2002::State_::State_( const Parameters_& p )
+  : state_vec_size( 0 )
   , num_ports_( 2 )
   , ode_state_( nullptr )
   , r_( 0 )
@@ -103,7 +103,7 @@ nest::iaf_wang_2002::State_::State_(  const Parameters_& p )
 }
 
 nest::iaf_wang_2002::State_::State_( const State_& s )
-  : state_vec_size ( s.state_vec_size )
+  : state_vec_size( s.state_vec_size )
   , num_ports_( s.num_ports_ )
   , ode_state_( nullptr )
   , r_( s.r_ )
@@ -119,7 +119,7 @@ nest::iaf_wang_2002::State_::State_( const State_& s )
   ode_state_[ G_GABA ] = s.ode_state_[ G_GABA ];
 }
 
-nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002 &n )
+nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002& n )
   : logger_( n )
   , spikes_()
   , s_( 0 )
@@ -131,7 +131,7 @@ nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002 &n )
   // Initialization of the remaining members is deferred to init_buffers_().
 }
 
-nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_ &, iaf_wang_2002 &n )
+nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_&, iaf_wang_2002& n )
   : logger_( n )
   , spikes_()
   , s_( 0 )
@@ -189,6 +189,7 @@ nest::iaf_wang_2002::Parameters_::set( const DictionaryDatum& d, Node* node )
 
   updateValueParam< double >( d, names::alpha, alpha, node );
   updateValueParam< double >( d, names::conc_Mg2, conc_Mg2, node );
+
   updateValueParam< double >( d, names::gsl_error_tol, gsl_error_tol, node );
 
   if ( V_reset >= V_th )
@@ -217,7 +218,7 @@ nest::iaf_wang_2002::Parameters_::set( const DictionaryDatum& d, Node* node )
   }
   if ( gsl_error_tol <= 0.0 )
   {
-    throw nest::BadProperty( "The gsl_error_tol must be strictly positive." );
+    throw BadProperty( "The gsl_error_tol must be strictly positive." );
   }
 }
 
@@ -230,9 +231,9 @@ nest::iaf_wang_2002::State_::get( DictionaryDatum& d ) const
 
   // total NMDA sum
   double NMDA_sum = get_NMDA_sum();
-  def < double >( d, names::NMDA_sum, NMDA_sum );
+  def< double >( d, names::NMDA_sum, NMDA_sum );
 
-  def < double >( d, "state_vec_size", state_vec_size ); // for debugging
+  def< double >( d, "state_vec_size", state_vec_size ); // for debugging
 }
 
 void
@@ -248,7 +249,7 @@ nest::iaf_wang_2002::State_::set( const DictionaryDatum& d, const Parameters_&, 
  * --------------------------------------------------------------------------- */
 
 nest::iaf_wang_2002::iaf_wang_2002()
-  :ArchivingNode()
+  : ArchivingNode()
   , P_()
   , S_( P_ )
   , B_( *this )
@@ -310,7 +311,7 @@ nest::iaf_wang_2002::init_state_()
 
   double* old_state = S_.ode_state_;
   S_.state_vec_size = State_::G_NMDA_base + 2 * ( S_.num_ports_ - 2 );
-  S_.ode_state_ = new double [ S_.state_vec_size ];
+  S_.ode_state_ = new double[ S_.state_vec_size ];
 
   assert( S_.ode_state_ );
 
@@ -335,6 +336,8 @@ nest::iaf_wang_2002::init_buffers_()
   {
     sb.clear(); // includes resize
   }
+
+  B_.currents_.clear(); // includes resize
 
   B_.logger_.reset(); // includes resize
   ArchivingNode::clear_history();
@@ -370,8 +373,10 @@ nest::iaf_wang_2002::init_buffers_()
   B_.sys_.jacobian = NULL;
   B_.sys_.dimension = S_.state_vec_size;
   B_.sys_.params = reinterpret_cast< void* >( this );
-  B_.step_ = nest::Time::get_resolution().get_ms();
-  B_.integration_step_ = nest::Time::get_resolution().get_ms();
+  B_.step_ = Time::get_resolution().get_ms();
+  B_.integration_step_ = Time::get_resolution().get_ms();
+
+  B_.I_stim_ = 0.0;
 }
 
 void
@@ -380,7 +385,7 @@ nest::iaf_wang_2002::calibrate()
   B_.logger_.init();
 
   // internals V_
-  V_.RefractoryCounts = nest::Time( nest::Time::ms( ( double ) ( P_.t_ref ) ) ).get_steps();
+  V_.RefractoryCounts = Time( Time::ms( ( double ) ( P_.t_ref ) ) ).get_steps();
 }
 
 /* ---------------------------------------------------------------------------
@@ -388,7 +393,7 @@ nest::iaf_wang_2002::calibrate()
  * --------------------------------------------------------------------------- */
 
 extern "C" inline int
-nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void* pnode)
+nest::iaf_wang_2002_dynamics( double, const double ode_state[], double f[], void* pnode )
 {
   // a shorthand
   typedef nest::iaf_wang_2002::State_ State_;
@@ -406,23 +411,25 @@ nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void*
 
   // The sum of NMDA_G
   double total_NMDA = 0;
-  for( size_t i = State_::G_NMDA_base + 1; i < node.S_.state_vec_size; i+=2 )
+  for ( size_t i = State_::G_NMDA_base + 1; i < node.S_.state_vec_size; i += 2 )
   {
     total_NMDA += ode_state[ i ];
   }
 
-  const double I_rec_NMDA = ( ode_state[ State_::V_m ] - node.P_.E_ex ) / ( 1 + node.P_.conc_Mg2 * std::exp( -0.062 * ode_state[ State_::V_m ] ) / 3.57 ) * total_NMDA;
+  const double I_rec_NMDA = ( ode_state[ State_::V_m ] - node.P_.E_ex )
+    / ( 1 + node.P_.conc_Mg2 * std::exp( -0.062 * ode_state[ State_::V_m ] ) / 3.57 ) * total_NMDA;
 
-  const double I_syn = I_AMPA + I_rec_GABA + I_rec_NMDA;
+  const double I_syn = I_AMPA + I_rec_GABA + I_rec_NMDA - node.B_.I_stim_;
 
   f[ State_::V_m ] = ( -node.P_.g_L * ( ode_state[ State_::V_m ] - node.P_.E_L ) - I_syn ) / node.P_.C_m;
 
   f[ State_::G_AMPA ] = -ode_state[ State_::G_AMPA ] / node.P_.tau_AMPA;
   f[ State_::G_GABA ] = -ode_state[ State_::G_GABA ] / node.P_.tau_GABA;
 
-  for( size_t i = State_::G_NMDA_base; i < node.S_.state_vec_size; i+=2 )
+  for ( size_t i = State_::G_NMDA_base; i < node.S_.state_vec_size; i += 2 )
   {
-    f[ i + 1 ] = -ode_state[ i + 1 ] / node.P_.tau_decay_NMDA + node.P_.alpha * ode_state[ i ] * ( 1 - ode_state[ i + 1 ] );
+    f[ i + 1 ] =
+      -ode_state[ i + 1 ] / node.P_.tau_decay_NMDA + node.P_.alpha * ode_state[ i ] * ( 1 - ode_state[ i + 1 ] );
     f[ i ] = -ode_state[ i ] / node.P_.tau_rise_NMDA;
   }
 
@@ -430,9 +437,9 @@ nest::iaf_wang_2002_dynamics(double, const double ode_state[], double f[], void*
 }
 
 void
-nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const long to)
+nest::iaf_wang_2002::update( Time const& origin, const long from, const long to )
 {
-  for ( long lag = from ; lag < to ; ++lag )
+  for ( long lag = from; lag < to; ++lag )
   {
     double t = 0.0;
 
@@ -451,17 +458,17 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
     while ( t < B_.step_ )
     {
       const int status = gsl_odeiv_evolve_apply( B_.e_,
-                                                 B_.c_,
-                                                 B_.s_,
-                                                 &B_.sys_,              // system of ODE
-                                                 &t,                    // from t
-                                                 B_.step_,              // to t <= step
-                                                 &B_.integration_step_, // integration step size
-                                                 S_.ode_state_ );       // neuronal state
+        B_.c_,
+        B_.s_,
+        &B_.sys_,              // system of ODE
+        &t,                    // from t
+        B_.step_,              // to t <= step
+        &B_.integration_step_, // integration step size
+        S_.ode_state_ );       // neuronal state
 
       if ( status != GSL_SUCCESS )
       {
-        throw nest::GSLSolverFailure( get_name(), status );
+        throw GSLSolverFailure( get_name(), status );
       }
     }
 
@@ -469,7 +476,7 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
     S_.ode_state_[ State_::G_AMPA ] += B_.spikes_[ AMPA - 1 ].get_value( lag );
     S_.ode_state_[ State_::G_GABA ] += B_.spikes_[ GABA - 1 ].get_value( lag );
 
-    for( size_t i = NMDA - 1; i < B_.spikes_.size(); ++i )
+    for ( size_t i = NMDA - 1; i < B_.spikes_.size(); ++i )
     {
       const size_t si = i - ( NMDA - 1 );
 
@@ -493,37 +500,47 @@ nest::iaf_wang_2002::update(nest::Time const & origin,const long from, const lon
       S_.ode_state_[ State_::V_m ] = P_.V_reset;
 
       // log spike with ArchivingNode
-      set_spiketime( nest::Time::step( origin.get_steps() + lag + 1 ) );
+      set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
 
-      nest::SpikeEvent se;
-      nest::kernel().event_delivery_manager.send( *this, se, lag );
+      SpikeEvent se;
+      kernel().event_delivery_manager.send( *this, se, lag );
     }
+
+    // set new input current
+    B_.I_stim_ = B_.currents_.get_value( lag );
 
     // voltage logging
     B_.logger_.record_data( origin.get_steps() + lag );
   }
-
 }
 
 // Do not move this function as inline to h-file. It depends on
 // universal_data_logger_impl.h being included here.
 void
-nest::iaf_wang_2002::handle( nest::DataLoggingRequest& e )
+nest::iaf_wang_2002::handle( DataLoggingRequest& e )
 {
   B_.logger_.handle( e );
 }
 
 void
-nest::iaf_wang_2002::handle( nest::SpikeEvent &e )
+nest::iaf_wang_2002::handle( SpikeEvent& e )
 {
   assert( e.get_delay_steps() > 0 );
   assert( e.get_rport() < static_cast< int >( B_.spikes_.size() ) );
 
-  const double steps = e.get_rel_delivery_steps( nest::kernel().simulation_manager.get_slice_origin() );
+  const double steps = e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() );
   const double weight = e.get_weight() * e.get_multiplicity();
 
   B_.spikes_[ e.get_rport() ].add_value( steps, weight );
 }
 
-#endif // HAVE_GSL
+void
+nest::iaf_wang_2002::handle( CurrentEvent& e )
+{
+  assert( e.get_delay_steps() > 0 );
 
+  B_.currents_.add_value(
+    e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() ), e.get_weight() * e.get_current() );
+}
+
+#endif // HAVE_GSL

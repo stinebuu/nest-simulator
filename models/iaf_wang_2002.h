@@ -1,4 +1,4 @@
-/**
+/*
  *  iaf_wang_2002.h
  *
  *  This file is part of NEST.
@@ -18,7 +18,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
  *
-**/
+ */
+
 #ifndef IAF_WANG_2002
 #define IAF_WANG_2002
 
@@ -116,7 +117,7 @@ SpikeEvent
 Receives
 ++++++++
 
-SpikeEvent, DataLoggingRequest
+SpikeEvent, CurrentEvent, DataLoggingRequest
 
 
 
@@ -148,7 +149,7 @@ public:
    *       Initialization of rest of state, buffers and internal variables is deferred to
    *       @c init_state_(), @c init_buffers_() and @c calibrate().
   **/
-  iaf_wang_2002(const iaf_wang_2002 &);
+  iaf_wang_2002( const iaf_wang_2002& );
 
   /**
    * Destructor.
@@ -175,17 +176,20 @@ public:
    * defining handle() for the given event.
    * ------------------------------------------------------------------------- */
 
-  void handle( SpikeEvent & );        //! accept spikes
-  void handle( DataLoggingRequest & );//! allow recording with multimeter
+  void handle( SpikeEvent& );         //! accept spikes
+  void handle( CurrentEvent& e );     //! accept current
+  void handle( DataLoggingRequest& ); //! allow recording with multimeter
+
   port handles_test_event( SpikeEvent&, port );
+  port handles_test_event( CurrentEvent&, rport );
   port handles_test_event( DataLoggingRequest&, port );
 
   /* -------------------------------------------------------------------------
    * Functions for getting/setting parameters and state values.
    * ------------------------------------------------------------------------- */
 
-  void get_status(DictionaryDatum &) const;
-  void set_status(const DictionaryDatum &);
+  void get_status( DictionaryDatum& ) const;
+  void set_status( const DictionaryDatum& );
 
 private:
   /**
@@ -203,7 +207,7 @@ private:
   void init_state_();
   void init_buffers_();
   void calibrate();
-  void update( Time const &, const long, const long );
+  void update( Time const&, const long, const long );
 
   // The next two classes need to be friends to access the State_ class/member
   friend class RecordablesMap< iaf_wang_2002 >;
@@ -235,7 +239,7 @@ private:
     double alpha;          //!<  in 1/ms
     double conc_Mg2;       //!< Extracellular Magnesium Concentration in mM
 
-    double gsl_error_tol;  //!< GSL Error Tolerance
+    double gsl_error_tol; //!< GSL Error Tolerance
 
     /**
      * Initialize parameters to their default values.
@@ -287,7 +291,7 @@ private:
     get_NMDA_sum() const
     {
       double NMDA_sum = 0.0;
-      for( size_t i = G_NMDA_base; i < state_vec_size; i+=2 )
+      for ( size_t i = G_NMDA_base; i < state_vec_size; i += 2 )
       {
         NMDA_sum += ode_state_[ i + 1 ];
       }
@@ -317,8 +321,8 @@ private:
    */
   struct Buffers_
   {
-    Buffers_( iaf_wang_2002 & );
-    Buffers_( const Buffers_ &, iaf_wang_2002 & );
+    Buffers_( iaf_wang_2002& );
+    Buffers_( const Buffers_&, iaf_wang_2002& );
 
     /**
      * Logger for all analog data
@@ -326,9 +330,10 @@ private:
     UniversalDataLogger< iaf_wang_2002 > logger_;
 
     // -----------------------------------------------------------------------
-    //   Buffers and sums of incoming spikes per timestep
+    //   Buffers and sums of incoming spikes and currents per timestep
     // -----------------------------------------------------------------------
     std::vector< RingBuffer > spikes_;
+    RingBuffer currents_;
 
     // -----------------------------------------------------------------------
     //   GSL ODE solver data structures
@@ -345,6 +350,15 @@ private:
     // it is safe to place both here.
     double step_;             //!< step size in ms
     double integration_step_; //!< current integration time step, updated by GSL
+
+    /**
+     * Input current injected by CurrentEvent.
+     * This variable is used to transport the current applied into the
+     * _dynamics function computing the derivative of the state vector.
+     * It must be a part of Buffers_, since it is initialized once before
+     * the first simulation, but not modified before later Simulate calls.
+     */
+    double I_stim_;
   };
 
   // Access functions for UniversalDataLogger -------------------------------
@@ -366,10 +380,10 @@ private:
   // Data members -----------------------------------------------------------
 
   // keep the order of these lines, seems to give best performance
-  Parameters_ P_;  //!< Free parameters.
-  State_      S_;  //!< Dynamic state.
-  Variables_  V_;  //!< Internal Variables
-  Buffers_    B_;  //!< Buffers.
+  Parameters_ P_; //!< Free parameters.
+  State_ S_;      //!< Dynamic state.
+  Variables_ V_;  //!< Internal Variables
+  Buffers_ B_;    //!< Buffers.
 
   //! Mapping of recordables names to access functions
   static RecordablesMap< iaf_wang_2002 > recordablesMap_;
@@ -404,6 +418,16 @@ iaf_wang_2002::handles_test_event( SpikeEvent&, port receptor_type )
 }
 
 inline port
+iaf_wang_2002::handles_test_event( CurrentEvent&, rport receptor_type )
+{
+  if ( receptor_type != 0 )
+  {
+    throw UnknownReceptorType( receptor_type, get_name() );
+  }
+  return 0;
+}
+
+inline port
 iaf_wang_2002::handles_test_event( DataLoggingRequest& dlr, port receptor_type )
 {
   // You should usually not change the code in this function.
@@ -416,11 +440,11 @@ iaf_wang_2002::handles_test_event( DataLoggingRequest& dlr, port receptor_type )
     throw UnknownReceptorType( receptor_type, get_name() );
   }
 
-  return B_.logger_.connect_logging_device(dlr, recordablesMap_);
+  return B_.logger_.connect_logging_device( dlr, recordablesMap_ );
 }
 
 inline void
-iaf_wang_2002::get_status( DictionaryDatum & d ) const
+iaf_wang_2002::get_status( DictionaryDatum& d ) const
 {
   P_.get( d );
   S_.get( d );
@@ -438,7 +462,7 @@ iaf_wang_2002::get_status( DictionaryDatum & d ) const
 }
 
 inline void
-iaf_wang_2002::set_status( const DictionaryDatum & d )
+iaf_wang_2002::set_status( const DictionaryDatum& d )
 {
   Parameters_ ptmp = P_;     // temporary copy in case of errors
   ptmp.set( d, this );       // throws if BadProperty
