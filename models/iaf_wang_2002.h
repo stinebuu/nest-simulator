@@ -119,8 +119,6 @@ Receives
 
 SpikeEvent, CurrentEvent, DataLoggingRequest
 
-
-
 References
 ++++++++++
 
@@ -402,7 +400,7 @@ iaf_wang_2002::send_test_event( Node& target, rport receptor_type, synindex, boo
 inline port
 iaf_wang_2002::handles_test_event( SpikeEvent&, port receptor_type )
 {
-  if ( !( INF_SPIKE_RECEPTOR < receptor_type && receptor_type < SUP_SPIKE_RECEPTOR ) )
+  if ( not( INF_SPIKE_RECEPTOR < receptor_type and receptor_type < SUP_SPIKE_RECEPTOR ) )
   {
     throw UnknownReceptorType( receptor_type, get_name() );
     return 0;
