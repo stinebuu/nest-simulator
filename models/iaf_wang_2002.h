@@ -333,6 +333,12 @@ private:
     std::vector< RingBuffer > spikes_;
     RingBuffer currents_;
 
+
+    /**
+     * Vector for weights
+     */
+    std::vector< double > weights_;
+
     // -----------------------------------------------------------------------
     //   GSL ODE solver data structures
     // -----------------------------------------------------------------------
@@ -411,7 +417,7 @@ iaf_wang_2002::handles_test_event( SpikeEvent&, port receptor_type )
     {
       ++S_.num_ports_;
     }
-    return receptor_type - 1;
+    return receptor_type;
   }
 }
 

@@ -122,6 +122,7 @@ nest::iaf_wang_2002::State_::State_( const State_& s )
 nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002& n )
   : logger_( n )
   , spikes_()
+  , weights_()
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
@@ -134,6 +135,7 @@ nest::iaf_wang_2002::Buffers_::Buffers_( iaf_wang_2002& n )
 nest::iaf_wang_2002::Buffers_::Buffers_( const Buffers_&, iaf_wang_2002& n )
   : logger_( n )
   , spikes_()
+  , weights_()
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
@@ -339,6 +341,8 @@ nest::iaf_wang_2002::init_buffers_()
 
   B_.currents_.clear(); // includes resize
 
+  B_.weights_.resize( S_.num_ports_ - NMDA + 1, 0.0 );
+
   B_.logger_.reset(); // includes resize
   ArchivingNode::clear_history();
 
@@ -411,9 +415,9 @@ nest::iaf_wang_2002_dynamics( double, const double ode_state[], double f[], void
 
   // The sum of NMDA_G
   double total_NMDA = 0;
-  for ( size_t i = State_::G_NMDA_base + 1; i < node.S_.state_vec_size; i += 2 )
+  for ( size_t i = State_::G_NMDA_base + 1, w_idx = 0; i < node.S_.state_vec_size; i += 2, ++w_idx )
   {
-    total_NMDA += ode_state[ i ];
+    total_NMDA += ode_state[ i ] * node.B_.weights_.at( w_idx );
   }
 
   const double I_rec_NMDA = ( ode_state[ State_::V_m ] - node.P_.E_ex )
@@ -526,12 +530,29 @@ void
 nest::iaf_wang_2002::handle( SpikeEvent& e )
 {
   assert( e.get_delay_steps() > 0 );
-  assert( e.get_rport() < static_cast< int >( B_.spikes_.size() ) );
+  assert( e.get_rport() <= static_cast< int >( B_.spikes_.size() ) );
 
   const double steps = e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() );
-  const double weight = e.get_weight() * e.get_multiplicity();
 
-  B_.spikes_[ e.get_rport() ].add_value( steps, weight );
+  const auto rport = e.get_rport();
+  if ( rport < NMDA )
+  {
+    B_.spikes_[ rport - 1 ].add_value( steps, e.get_weight() * e.get_multiplicity() );
+  }
+  else
+  {
+    B_.spikes_[ rport - 1 ].add_value( steps, e.get_multiplicity() );
+
+    const size_t w_idx = rport - NMDA;
+    if ( B_.weights_[ w_idx ] == 0.0 )
+    {
+      B_.weights_[ w_idx ] = e.get_weight();
+    }
+    else if ( B_.weights_[ w_idx ] != e.get_weight() )
+    {
+      throw KernelException( "iaf_wang_2002 requires constant weights." );
+    }
+  }
 }
 
 void
