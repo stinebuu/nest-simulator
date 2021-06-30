@@ -77,8 +77,8 @@ The following parameters can be set in the status dictionary.
 
 =============== ======= ===========================================================
  E_L            mV      Resting Potential
- E_ex           mV      Excitatory resting Potential
- E_in           mV      Inhibitory resting Potential
+ E_ex           mV      Excitatory reversal Potential
+ E_in           mV      Inhibitory reversal Potential
  V_th           mV      Threshold Potential
  V_reset        mV      Reset Potential
  C_m            pF      Membrane Capacitance
@@ -108,6 +108,11 @@ The following values can be recorded.
 .. note::
    It is possible to set values for V_m, g_AMPA and g_GABA when creating the model. The
    different g_NMDA_j (j represents presynaptic neuron j) can not be set by the user though.
+
+-- note::
+   The variable g_AMPA and g_GABA in the NEST implementation does not correspond to g_{recAMPA, extAMPA, GABA} in [1].
+   g_{recAMPA, extAMPA, GABA, NMBA} from [1] is built into the weights in this NEST model, so setting the variables
+   is thus done by changing the weights.
 
 Sends
 +++++
@@ -223,8 +228,8 @@ private:
   struct Parameters_
   {
     double E_L;            //!< Resting Potential in mV
-    double E_ex;           //!< Excitatory resting Potential in mV
-    double E_in;           //!< Inhibitory resting Potential in mV
+    double E_ex;           //!< Excitatory reversal Potential in mV
+    double E_in;           //!< Inhibitory reversal Potential in mV
     double V_th;           //!< Threshold Potential in mV
     double V_reset;        //!< Reset Potential in mV
     double C_m;            //!< Membrane Capacitance in pF
